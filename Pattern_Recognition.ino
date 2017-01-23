@@ -1,4 +1,3 @@
-
 #define LED_SMALL_PIN 14
 #define LED_LARGE_PIN 15
 #define IR_SENSOR_PIN_1 4
@@ -11,24 +10,28 @@ struct Features {
 
 Features Feature_Extraction() {
   Features features;
+  
   features.IR_Sensor1 = digitalRead(IR_SENSOR_PIN_1);
   features.IR_Sensor2 = digitalRead(IR_SENSOR_PIN_2);
-  
+
   return features; 
 }
 
 String Pattern_Recognition(Features features) {
   String box_size;
-  
+
+  //If both beams are broken
   if(features.IR_Sensor1 == LOW && features.IR_Sensor2 == LOW) {
     box_size = "Large";
   }
+  //If one beam is broken
   else if(features.IR_Sensor1 == LOW && features.IR_Sensor2 == HIGH) {
     box_size = "Small";
   }
   else if(features.IR_Sensor1 == HIGH && features.IR_Sensor2 == LOW) {
     box_size = "Small";
   }
+  //If neither beam is broken
   else {
     box_size = "None";
   }
@@ -49,9 +52,9 @@ void Accuation(String box_size) {
 }
 
 void setup() {
-  // put your setup code here, to run once:
   pinMode(LED_SMALL_PIN, OUTPUT);
   pinMode(LED_LARGE_PIN, OUTPUT);
+  
   pinMode(IR_SENSOR_PIN_1, INPUT);
   digitalWrite(IR_SENSOR_PIN_1, HIGH);
   pinMode(IR_SENSOR_PIN_2, INPUT);
@@ -61,12 +64,12 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  //Turns both LEDs off before each reading
   digitalWrite(LED_SMALL_PIN, LOW);
   digitalWrite(LED_LARGE_PIN, LOW);
 
   //Should put feature extraction and pattern recognition in one multi-second for loop to
-  //give the box time to go through the sensors.
+    //give the box time to go through the sensors.
   Features feature_states;
   feature_states = Feature_Extraction();
 
