@@ -1,19 +1,37 @@
 #define LED_SMALL_PIN 14
 #define LED_LARGE_PIN 15
-#define IR_SENSOR_PIN_1 4
+#define IR_SENSOR_PIN_1 2
 #define IR_SENSOR_PIN_2 3
 
+bool IR_Sensor1;
+bool IR_Sensor2;
+
 struct Features {
-  bool IR_Sensor1;
-  bool IR_Sensor2;
+  bool lt_10in;
 };
 
 Features Feature_Extraction() {
   Features features;
   
-  features.IR_Sensor1 = digitalRead(IR_SENSOR_PIN_1);
-  features.IR_Sensor2 = digitalRead(IR_SENSOR_PIN_2);
+  IR_Sensor1 = digitalRead(IR_SENSOR_PIN_1);
+  IR_Sensor2 = digitalRead(IR_SENSOR_PIN_2);
 
+  if(IR_Sensor1 == LOW && IR_Sensor2 == LOW) {
+    features.lt_10in = false;
+  }
+  //If one beam is broken
+  else if(IR_Sensor1 == LOW && IR_Sensor2 == HIGH) {
+    features.lt_10in = true;
+  }
+  else if(IR_Sensor1 == HIGH && IR_Sensor2 == LOW) {
+    features.lt_10in = true;
+  }
+  //If neither beam is broken
+  else {
+    //box_size = "None";
+    features.lt_10in = true;
+  }
+  
   return features; 
 }
 
@@ -21,29 +39,21 @@ String Pattern_Recognition(Features features) {
   String box_size;
 
   //If both beams are broken
-  if(features.IR_Sensor1 == LOW && features.IR_Sensor2 == LOW) {
-    box_size = "Large";
+  if(features.lt_10in) {
+    box_size = "Less than 10 inches.";
   }
-  //If one beam is broken
-  else if(features.IR_Sensor1 == LOW && features.IR_Sensor2 == HIGH) {
-    box_size = "Small";
-  }
-  else if(features.IR_Sensor1 == HIGH && features.IR_Sensor2 == LOW) {
-    box_size = "Small";
-  }
-  //If neither beam is broken
   else {
-    box_size = "None";
+    box_size = "Greater than 10 inches.";
   }
   return box_size;
 }
 
-void Accuation(String box_size) {
+void Actuation(String box_size) {
   Serial.println(box_size);
-  if(box_size == "Small") {
+  if(box_size == "Less than 10 inches.") {
     digitalWrite(LED_SMALL_PIN, HIGH);
   }
-  else if(box_size == "Large") {
+  else if(box_size == "Greater than 10 inches.") {
     digitalWrite(LED_LARGE_PIN, HIGH);
   }
   else if(box_size == "None") {
@@ -76,7 +86,7 @@ void loop() {
   String pattern_size;
   pattern_size = Pattern_Recognition(feature_states);
 
-  Accuation(pattern_size);
+  Actuation(pattern_size);
 
   delay(1000);
 }
