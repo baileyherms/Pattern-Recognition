@@ -9,6 +9,8 @@
 
 #define TRIGGER_PIN 12
 #define ECHO_PIN 11
+
+// Make these const
 #define MAX_DISTANCE 50
 //K Nearest Neighbors
 #define K 3
