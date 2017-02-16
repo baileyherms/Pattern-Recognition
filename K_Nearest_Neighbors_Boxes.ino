@@ -5,63 +5,55 @@
 #include <Arduino.h>
 #include <NewPing.h>
 
-#include "Known_Objects.h"
+#include "Object.h"
 
 #define TRIGGER_PIN 12
 #define ECHO_PIN 11
-#define MAX_DISTANCE 50
+
+const int DISTANCE_SENSOR_MAX_DISTANCE = 50;
+
 //K Nearest Neighbors
-#define K 3
+const int K = 3;
 
-const size_t NUM_OF_KNOWN = 9;
-const size_t NUM_OF_TYPES = 3;
+const size_t NUM_OF_KNOWN_OBJECTS = 9;
+const size_t NUM_OF_OBJECT_TYPES = 3;
 String Known_Types[3] = {"Small", "Medium", "Large"};
-Known_Objects Boxes[NUM_OF_KNOWN] = {{"Small", 11},
-                        {"Small", 15},
-                        {"Small", 12},
-                        {"Medium", 27},
-                        {"Medium", 29},
-                        {"Medium", 30},
-                        {"Large", 40},
-                        {"Large", 42},
-                        {"Large", 42}};
 
+NewPing sonar(TRIGGER_PIN, ECHO_PIN, DISTANCE_SENSOR_MAX_DISTANCE);
 
-NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
-
-struct Features {
-  int height;
-};
-
-Features Feature_Extraction() {
-  Features features;
-  //Get height
-
-  int dist = sonar.ping_cm();
+Object ObjectFeatureExtraction() {
+  Object currObject;
+  int currDistance;
   
-  features.height = MAX_DISTANCE - dist;
+  //Get height feature
+  currDistance = sonar.ping_cm();
   
-  return features; 
+  currObject.height = DISTANCE_SENSOR_MAX_DISTANCE - currDistance;
+  
+  return currObject; 
 }
 
-String Pattern_Recognition(Features features) {
+String PatternRecognition(Object currObject, Object knownObjects[]) {   // FIXME: Efficiency of the array passing??
 
-  Known_Objects diff_Boxes[9];
+  //Object knownObjectsDifferences[9];
   
-  String closest_object;
-
   Serial.print("Object height: ");
-  Serial.println(features.height);
+  Serial.println(currObject.height);
 
-  //k nearest neighbors
+  // k nearest neighbors
 
-  //Checks the min difference between two points
-  int min_difference = 100;
-  int pos_min_difference[K];
-
+  // Checks the min difference between two points
   /*
-  String temp_type;
-  int temp_height;
+  int min_difference = 100; // FIXME needed?
+
+  // Find differences between current object's distance and known object's distances and store in difference array
+  for(int i = 0; i < NUM_OF_KNOWN_OBJECTS; ++i) {
+    knownObjectsDifferences[i].type   = knownObjects[i].type;
+    knownObjectsDifferences[i].height = abs(knownObjects[i].height - currObject.height); // Record height difference
+  }
+*/
+  
+  /*
   for(int i = 0; i < NUM_OF_KNOWN; ++i) {
     for(int j = 0; j < NUM_OF_KNOWN - i - 1; ++j) {
       if(Boxes[j].height > Boxes[j+1].height) {
@@ -75,21 +67,56 @@ String Pattern_Recognition(Features features) {
     }
   }
   */
-
+  
   //MOST NEW CODE STARTS HERE
   //Find differences between distance and known box sizes and store in difference array
-  for(int i = 0; i < NUM_OF_KNOWN; ++i) {
-    /*
-    if(abs(Boxes[i].height - features.height) <= min_difference) {
-      //min_difference = abs(Boxes[i].height - features.height);
-      //pos_min_difference[0] = i;
+  /*
+  int diff_pos = 0;
+  for(int j = 0; j < K; ++j) {
+    for(int i = 0; i < NUM_OF_KNOWN; ++i) {
       
+      if(abs(Boxes[i].height - features.height) <= min_difference) {
+        //min_difference = abs(Boxes[i].height - features.height);
+        //pos_min_difference[0] = i;
+        diff_Boxes[diff_pos].type = Boxes[i].type;
+        diff_Boxes[diff_pos].height = abs(Boxes[i].height - features.height);
+        min_difference = abs(Boxes[i].height - features.height);
+      }
+      
+      //diff_Boxes[i].type = Boxes[i].type;
+      //diff_Boxes[i].height = abs(Boxes[i].height - features.height);
     }
-    */
-    diff_Boxes[i].type = Boxes[i].type;
-    diff_Boxes[i].height = abs(Boxes[i].height - features.height);
+    diff_pos++;
+  }
+  */
+
+  Object kNearestObjects[K];
+  
+  for(int i = 0; i < K; ++i) {
+    kNearestObjects[i].height = abs(knownObjects[i].height - currObject.height);
+    kNearestObjects[i].type = knownObjects[i].type;
+  }
+  for(int i = K; i < NUM_OF_KNOWN_OBJECTS; ++i) {
+    int max_diff = 0;
+    int max_index = 0;
+    for(int j = 0; j < K; ++j) {
+      if(kNearestObjects[j].height > max_diff) {
+        max_diff = kNearestObjects[j].height;
+        max_index = j;
+      }
+    }
+    if(abs(knownObjects[i].height - currObject.height) < max_diff) {
+      kNearestObjects[max_index].type = knownObjects[i].type;
+      kNearestObjects[max_index].height = abs(knownObjects[i].height - currObject.height);
+    }
   }
 
+  for(int i = 0; i < K; ++i) {
+    Serial.println(kNearestObjects[i].type);
+    Serial.println(kNearestObjects[i].height);
+  }
+
+  /*
   String temp_type;
   int temp_height;
   //Sort the difference array
@@ -105,21 +132,23 @@ String Pattern_Recognition(Features features) {
       }
     }
   }
-
+  */
+  /*
   //Create new array holding only K elements
   Known_Objects k_Nearest_Boxes[K];
   for(int i = 0; i < K; ++i) {
     k_Nearest_Boxes[i].type = diff_Boxes[i].type;
     k_Nearest_Boxes[i].height = diff_Boxes[i].height;
   }
-
+  */
   int count = 0;
   int max_count = 0;
   String max_type;
   //Find out which box type occurs the most
-  for(int i = 0; i < NUM_OF_TYPES; ++i) {
-    for(int j = 0; j < NUM_OF_TYPES; ++j) {
-      if(k_Nearest_Boxes[j].type == Known_Types[i]) {
+  for(int i = 0; i < NUM_OF_OBJECT_TYPES; ++i) {
+    count = 0;
+    for(int j = 0; j < K; ++j) {
+      if(kNearestObjects[j].type == Known_Types[i]) {
         count++;
       }
     }
@@ -129,9 +158,8 @@ String Pattern_Recognition(Features features) {
     }
   }
 
-  closest_object = max_type;
   
-  return closest_object;
+  return max_type;
 }
 
 void Actuation(String object) {
@@ -156,13 +184,24 @@ void loop() {
     //give the box time to go through the sensors.
 
     
-  Features feature_states;
-  feature_states = Feature_Extraction();
+  Object knownObjects[NUM_OF_KNOWN_OBJECTS] = {{"Small", 11},
+                        {"Small", 15},
+                        {"Small", 12},
+                        {"Medium", 27},
+                        {"Medium", 29},
+                        {"Medium", 30},
+                        {"Large", 40},
+                        {"Large", 42},
+                        {"Large", 42}};
+    
+  Object currObject; 
+  String closestObject;
+    
+  currObject = ObjectFeatureExtraction();
 
-  String closest_object;
-  closest_object = Pattern_Recognition(feature_states);
+  closestObject = PatternRecognition(currObject, knownObjects);
 
-  Actuation(closest_object);
+  Actuation(closestObject);
 
   delay(1000);
 }
