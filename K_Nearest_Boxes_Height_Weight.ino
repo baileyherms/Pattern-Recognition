@@ -1,4 +1,4 @@
-//Distance Sensor
+//Distance Sensor   UPDATE
 //Feature is height
 //Pre-known object of different heights
 //Pattern is see what the object is closest to.
@@ -34,12 +34,12 @@ String Known_Object_Types[3] = {"Small", "Medium", "Large"};
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, DISTANCE_SENSOR_MAX_DISTANCE);
 HX711 scale(DOUT, CLK);
 
-float PythagoreanTheorem(int a, float b) {
+float ComputeDistance(float a, float b) {
   float c;
   c = a*a + b*b;
   c = sqrt(c);
   // Nearest 100ths place
-  c = roundf(c * 100) / 100;
+  c = roundf(c * 100.0) / 100.0;
   
   return c;
 }
@@ -54,12 +54,12 @@ Object ObjectFeatureExtraction() {
   currObject.height = DISTANCE_SENSOR_MAX_DISTANCE - currDistance;
 
   // Get weight feature (in lbs) to the nearest 100ths place
-  currObject.weight = roundf(scale.get_units() * 100) / 100;
+  currObject.weight = roundf(scale.get_units() * 100.0) / 100.0;
   
   return currObject; 
 }
 
-String PatternRecognition(Object currObject, Object knownObjects[]) {   // FIXME: Efficiency of the array passing??
+String PatternRecognition(Object currObject, Object knownObjects[]) {
   
   Object kNearestObjects[K];
   
@@ -78,20 +78,20 @@ String PatternRecognition(Object currObject, Object knownObjects[]) {   // FIXME
   // Now, determine if each remaining object is among the K closest, and if so insert into array (thus dropping one obj)
   for(int i = K; i < NUM_OF_KNOWN_OBJECTS; ++i) { // For each remaining known object
     
-    // Find the current max difference in the K nearest objects
+    // Find the current max difference (CHANGE TO DISTANCE, EVERYWHERE) in the K nearest objects
     float max_diff = 0;
     int max_index = 0;
     int temp_height = 0;
     float temp_weight = 0;
-    float temp_pythag = 0;
+    float temp_dist = 0;
 
     for(int j = 0; j < K; ++j) {
       temp_height = kNearestObjects[j].height;
       temp_weight = kNearestObjects[j].weight;
-      temp_pythag = PythagoreanTheorem(temp_height, temp_weight);
+      temp_dist = ComputeDistance(temp_height, temp_weight);
       
-      if(temp_pythag > max_diff) { 
-        max_diff = temp_pythag;
+      if(temp_dist > max_diff) { // Update max
+        max_diff = temp_dist;
         max_index = j;
       }
     }
@@ -99,8 +99,8 @@ String PatternRecognition(Object currObject, Object knownObjects[]) {   // FIXME
     // If the current known object's difference < the max difference in the current K nearest neighbors
     temp_height = abs(knownObjects[i].height - currObject.height);
     temp_weight = abs(knownObjects[i].weight - currObject.weight);
-    temp_pythag = PythagoreanTheorem(temp_height, temp_weight);
-    if(temp_pythag < max_diff) {
+    temp_dist = ComputeDistance(temp_height, temp_weight);
+    if(temp_dist < max_diff) {
       // Replace the existing neighbor having max_diff, by the current known object, in the K nearest neighbors array
       kNearestObjects[max_index].type = knownObjects[i].type;
       kNearestObjects[max_index].height = temp_height;
@@ -179,4 +179,3 @@ void loop() {
 
   delay(1000);
 }
-
