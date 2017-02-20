@@ -5,7 +5,7 @@
 
 typedef struct {
   String type;
-  int height;
+  float height;
   float weight;
 } Object;
 
