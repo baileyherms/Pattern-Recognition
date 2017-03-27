@@ -27,8 +27,11 @@ float ColorDistance(Object currObject, Object knownObject) {
   return dist;
 }
 
+
 float ComputeDistance(Object currObject, Object knownObject) {
+  // Compute color distances
   float colorDistance = ColorDistance(currObject, knownObject);
+  // Square all the 
   float dist = pow(colorDistance, 2);
   dist = sqrt(dist);
   // Nearest 100ths place
@@ -37,9 +40,8 @@ float ComputeDistance(Object currObject, Object knownObject) {
   return dist;
 }
 
-Object ObjectFeatureExtraction() {
+void ObjectFeatureExtraction(Object &currObject) {
   // Pass in an object (Pass by pointer)
-  Object currObject;
   int currDistance;
   
   // Get Image from camera
@@ -52,8 +54,6 @@ Object ObjectFeatureExtraction() {
     currObject.green = Serial.read();
     currObject.blue = Serial.read();
   }
-  
-  return currObject;
 }
 
 String PatternRecognition(Object currObject, Object knownObjects[]) {
@@ -163,20 +163,18 @@ void loop() {
   //Should put feature extraction and pattern recognition in one multi-second for loop to
     //give the box time to go through the sensors.
 
-  Object knownObjects[NUM_OF_KNOWN_OBJECTS] = {{"Small", 11},
-                        {"Small", 15},
-                        {"Small", 12},
-                        {"Medium", 27},
-                        {"Medium", 29},
-                        {"Medium", 30},
-                        {"Large", 40},
-                        {"Large", 42},
-                        {"Large", 42}};
+  Object knownObjects[NUM_OF_KNOWN_OBJECTS] =
+                        {{"Orange", 222, 186, 43},
+                        {"Orange", 247, 174, 47},
+                        {"Orange", 233, 151, 9},
+                        {"Apple", 233, 61, 9},
+                        {"Apple", 215, 26, 26},
+                        {"Apple", 225, 20, 20}};
     
   Object currObject; 
   String closestObject;
     
-  currObject = ObjectFeatureExtraction();
+  ObjectFeatureExtraction(currObject);
 
   closestObject = PatternRecognition(currObject, knownObjects);
 
