@@ -1,7 +1,7 @@
-//Distance Sensor
-//Feature is height
-//Pre-known object of different heights
-//Pattern is see what the object is closest to.
+// Distance Sensor
+// Feature is height
+// Pre-known object of different heights
+// Pattern is see what the object is closest to.
 #include <Arduino.h>
 #include <NewPing.h>
 
@@ -12,7 +12,7 @@
 
 const int DISTANCE_SENSOR_MAX_DISTANCE = 50;
 
-//K Nearest Neighbors
+// K Nearest Neighbors
 const int K = 3;
 
 const size_t NUM_OF_KNOWN_OBJECTS = 9;
@@ -22,11 +22,11 @@ String Known_Object_Types[3] = {"Small", "Medium", "Large"};
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, DISTANCE_SENSOR_MAX_DISTANCE);
 
 Object ObjectFeatureExtraction() {
-  //Pass in an object (Pass by pointer) (Maybe?)
+  // Pass in an object (Pass by pointer)
   Object currObject;
   int currDistance;
   
-  //Get height feature
+  // Get height feature
   currDistance = sonar.ping_cm();
   
   currObject.height = DISTANCE_SENSOR_MAX_DISTANCE - currDistance;
@@ -34,9 +34,7 @@ Object ObjectFeatureExtraction() {
   return currObject; 
 }
 
-
-String PatternRecognition(Object currObject, Object knownObjects[]) {   // FIXME: Efficiency of the array passing??
-  
+String PatternRecognition(Object currObject, Object knownObjects[]) {
   Object kNearestObjects[K];
   
   Serial.print("Object height: ");
@@ -49,10 +47,9 @@ String PatternRecognition(Object currObject, Object knownObjects[]) {   // FIXME
     kNearestObjects[i].type = knownObjects[i].type;
   }  
   
-  
   // Now, determine if each remaining object is among the K closest, and if so insert into array (thus dropping one obj)
   for(int i = K; i < NUM_OF_KNOWN_OBJECTS; ++i) { // For each remaining known object
-  
+    
     // Find the current max difference in the K nearest objects
     int max_diff = 0;
     int max_index = 0;
@@ -77,7 +74,6 @@ String PatternRecognition(Object currObject, Object knownObjects[]) {   // FIXME
     Serial.println(kNearestObjects[i].height);
   }
 
-
   int count = 0;
   int max_count = 0;
   String max_type;
@@ -95,11 +91,8 @@ String PatternRecognition(Object currObject, Object knownObjects[]) {   // FIXME
     }
   }
 
-  
   return max_type;
 }
-
-
 
 void Actuation(String object) {
   if(object != "") {
@@ -108,19 +101,15 @@ void Actuation(String object) {
   }
 }
 
-
-
 void setup() {
-  
   Serial.begin(9600);
-  
 }
 
 void loop() {
-  //Turns both LEDs off before each reading
+  // Turns both LEDs off before each reading
 
-  //Should put feature extraction and pattern recognition in one multi-second for loop to
-    //give the box time to go through the sensors.
+  // Should put feature extraction and pattern recognition in one multi-second for loop to
+    // give the box time to go through the sensors.
 
   Object knownObjects[NUM_OF_KNOWN_OBJECTS] = {{"Small", 11},
                         {"Small", 15},
@@ -143,3 +132,4 @@ void loop() {
 
   delay(1000);
 }
+

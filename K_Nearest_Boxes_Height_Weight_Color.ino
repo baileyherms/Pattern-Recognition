@@ -29,6 +29,7 @@ const int DISTANCE_SENSOR_MAX_DISTANCE = 50;
 const float calibration_factor = 0;
 
 // K Nearest Neighbors
+// May want to declare locally and pass as parameter
 const int K = 3;
 
 byte gammatable[256];
@@ -59,14 +60,20 @@ float ComputeDistance(float a, float b) {
   return c;
 }
 
-float ComputeDistance(Object currObject, Object knownObject) {
-  float height = currObject.height - knownObject.height;
-  float weight = currObject.weight - knownObject.weight;
+float ColorDistance(Object currObject, Object knownObject) {
   float red = currObject.red - knownObject.red;
   float green = currObject.green - knownObject.green;
   float blue = currObject.blue - knownObject.blue;
-  float dist = 0;
-  dist = pow(height, 2) + pow(weight, 2) + pow(red, 2) + pow(green, 2) + pow(blue, 2);
+  float dist = pow(red, 2) + pow(green, 2) + pow(blue, 2);
+  dist = roundf(dist* 100.0) / 100.0;
+  return dist;
+}
+
+float ComputeDistance(Object currObject, Object knownObject) {
+  float height = ((currObject.height - knownObject.height) - HEIGHT_MIN) / (HEIGHT_MAX - HEIGHT_MIN);
+  float weight =  ((currObject.weight - knownObject.weight) - WEIGHT_MIN) / (WEIGHT_MAX - WEIGHT_MIN);;
+  float colorDistance = ColorDistance(currObject, knownObject);
+  float dist = pow(height, 2) + pow(weight, 2) + pow(colorDistance, 2);
   dist = sqrt(dist);
   // Nearest 100ths place
   dist = roundf(dist * 100.0) / 100.0;
@@ -112,6 +119,8 @@ Object ObjectFeatureExtraction() {
   return currObject; 
 }
 
+/*
+
 float Standardize(float original_value, float min_value, float max_value) {
   float standardized;
   standardized = (original_value - min_value)/(max_value - min_value);
@@ -133,8 +142,9 @@ void StandardizeObject(Object &currObject, Object (&knownObjects)[NUM_OF_KNOWN_O
     knownObjects[i].blue = Standardize(knownObjects[i].blue, RGB_MIN, RGB_MAX);
   }
 }
+*/
 
-String PatternRecognition(Object currObject, Object knownObjects[]) {
+String PatternRecognition(Object currObject, Object knownObjects[], size_t NUM_OF_KNOWN_OBJECTS) {
   
   Object kNearestObjects[K];
   // For testing purposes
@@ -214,6 +224,7 @@ String PatternRecognition(Object currObject, Object knownObjects[]) {
       kNearestObjects[max_index].red = temp_red;
       kNearestObjects[max_index].green = temp_green;
       kNearestObjects[max_index].blue = temp_blue;
+      max_diff = temp_dist;
     }
   }
 
@@ -269,6 +280,7 @@ void loop() {
 
   // {Type, height (cm.), weight (lbs.)}
   // Small is red, Medium is green, Large is blue
+  const size_t NUM_OF_KNOWN_OBJECTS = 9;
   Object knownObjects[NUM_OF_KNOWN_OBJECTS] = { {"Small", 11, 1.2, 230, 54, 27},
                                                 {"Small", 15, 0.8, 205, 43, 18},
                                                 {"Small", 12, 1.6, 253, 40, 7},
@@ -278,6 +290,8 @@ void loop() {
                                                 {"Large", 40, 4.6, 30, 18, 191},
                                                 {"Large", 42, 4.2, 66, 53, 235},
                                                 {"Large", 42, 5.3, 17, 9, 134}};
+
+  const size_t NUM_OF_TEST_OBJECTS = 9;
 
   Object testObjects[NUM_OF_KNOWN_OBJECTS] = {  {"", 11, 1.2, 230, 54, 27},
                                                 {"", 15, 0.8, 205, 43, 18},
@@ -292,7 +306,9 @@ void loop() {
   Object currObject; 
   String closestObject;
     
-  //currObject = ObjectFeatureExtraction();
+  currObject = ObjectFeatureExtraction();
+  // Testing purposes
+  /*
   Serial.print("Test: ");
   Serial.println(test);
   currObject = testObjects[test];
@@ -302,8 +318,9 @@ void loop() {
   else {
     ++test;
   }
+  */
 
-  StandardizeObject(currObject, knownObjects);
+  //StandardizeObject(currObject, knownObjects);
   /*
   Serial.println(currObject.type);
   Serial.println(currObject.height);
@@ -321,7 +338,7 @@ void loop() {
     Serial.println(knownObjects[i].blue);
   }
   */
-  closestObject = PatternRecognition(currObject, knownObjects);
+  closestObject = PatternRecognition(currObject, knownObjects, NUM_OF_KNOWN_OBJECTS);
 
   Actuation(closestObject);
   

@@ -6,6 +6,7 @@
 typedef struct {
   String type;
   float height;
+  float width;
   float weight;
   float red;
   float green;
