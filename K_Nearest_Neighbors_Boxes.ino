@@ -21,9 +21,10 @@ String Known_Object_Types[3] = {"Small", "Medium", "Large"};
 
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, DISTANCE_SENSOR_MAX_DISTANCE);
 
-Object ObjectFeatureExtraction() {
+// Takes the features from the current object and converts them to strings and integers
+// **
+void ObjectFeatureExtraction(Object &currObject) {
   // Pass in an object (Pass by pointer)
-  Object currObject;
   int currDistance;
   
   // Get height feature
@@ -31,9 +32,10 @@ Object ObjectFeatureExtraction() {
   
   currObject.height = DISTANCE_SENSOR_MAX_DISTANCE - currDistance;
   
-  return currObject; 
 }
 
+// Finds the patterns from the current object and compares them to patterns from the given objects
+// **
 String PatternRecognition(Object currObject, Object knownObjects[]) {
   Object kNearestObjects[K];
   
@@ -94,6 +96,8 @@ String PatternRecognition(Object currObject, Object knownObjects[]) {
   return max_type;
 }
 
+// Prints the type of object that is being passed through the project
+// **
 void Actuation(String object) {
   if(object != "") {
     Serial.print("\t");
@@ -124,7 +128,7 @@ void loop() {
   Object currObject; 
   String closestObject;
     
-  currObject = ObjectFeatureExtraction();
+  ObjectFeatureExtraction(currObject);
 
   closestObject = PatternRecognition(currObject, knownObjects);
 

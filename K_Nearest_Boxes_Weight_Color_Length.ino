@@ -2,6 +2,9 @@
 //Feature is width
 //Pre-known object of different widths
 //Pattern is see what the object is closest to.
+
+// This file has the most up-to-date code of all the files
+
 #include <Arduino.h>
 #include <NewPing.h>
 #include <HX711.h>
@@ -52,7 +55,7 @@ HX711 scale(DOUT, CLK);
 
 // Takes the features from the current object and converts them to strings and integers
 // **
-Object ObjectFeatureExtraction(Object &currObject) {
+void ObjectFeatureExtraction(Object &currObject) {
   //Object currObject;
   int currDistance;
   // clear_val is needed b/c the getRawData() requries 4 values
@@ -114,16 +117,7 @@ Object ObjectFeatureExtraction(Object &currObject) {
   //return currObject; 
 }
 
-float ComputeDistanceofFloat(float a, float b) {
-  float c;
-  c = a*a + b*b;
-  c = sqrt(c);
-  // Nearest 100ths place
-  c = roundf(c * 100.0) / 100.0;
-  
-  return c;
-}
-
+//  Computes the euclidean distance between the known and the current object's rgb values
 float ComputeDistanceofColors(Object currObject, Object knownObject) {
   float red = currObject.red - knownObject.red;
   float green = currObject.green - knownObject.green;
@@ -133,6 +127,7 @@ float ComputeDistanceofColors(Object currObject, Object knownObject) {
   return dist;
 }
 
+//  Computes the euclidean distance between the known and the current object's features
 float ComputeDistanceofObjects(Object currObject, Object knownObject) {
   float width = ((currObject.width - knownObject.width) - WIDTH_MIN) / (WIDTH_MAX - WIDTH_MIN);
   float weight =  ((currObject.weight - knownObject.weight) - WEIGHT_MIN) / (WEIGHT_MAX - WEIGHT_MIN);;

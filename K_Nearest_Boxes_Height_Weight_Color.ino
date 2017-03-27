@@ -50,17 +50,8 @@ const int RGB_MIN = 0;
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, DISTANCE_SENSOR_MAX_DISTANCE);
 HX711 scale(DOUT, CLK);
 
-float ComputeDistance(float a, float b) {
-  float c;
-  c = a*a + b*b;
-  c = sqrt(c);
-  // Nearest 100ths place
-  c = roundf(c * 100.0) / 100.0;
-  
-  return c;
-}
-
-float ColorDistance(Object currObject, Object knownObject) {
+//  Computes the euclidean distance between the known and the current object's rgb values
+float ComputeDistanceofColors(Object currObject, Object knownObject) {
   float red = currObject.red - knownObject.red;
   float green = currObject.green - knownObject.green;
   float blue = currObject.blue - knownObject.blue;
@@ -69,10 +60,11 @@ float ColorDistance(Object currObject, Object knownObject) {
   return dist;
 }
 
-float ComputeDistance(Object currObject, Object knownObject) {
+//  Computes the euclidean distance between the known and the current object's features
+float ComputeDistanceofObjects(Object currObject, Object knownObject) {
   float height = ((currObject.height - knownObject.height) - HEIGHT_MIN) / (HEIGHT_MAX - HEIGHT_MIN);
   float weight =  ((currObject.weight - knownObject.weight) - WEIGHT_MIN) / (WEIGHT_MAX - WEIGHT_MIN);;
-  float colorDistance = ColorDistance(currObject, knownObject);
+  float colorDistance = ComputeDistanceofColors(currObject, knownObject);
   float dist = pow(height, 2) + pow(weight, 2) + pow(colorDistance, 2);
   dist = sqrt(dist);
   // Nearest 100ths place
@@ -81,9 +73,10 @@ float ComputeDistance(Object currObject, Object knownObject) {
   return dist;
 }
 
-Object ObjectFeatureExtraction() {
+// Takes the features from the current object and converts them to strings and integers
+// **
+void ObjectFeatureExtraction(Object &currObject) {
   // Pass in an object (Pass by pointer) (Maybe?)
-  Object currObject;
   int currDistance;
   //Need a fourth value for getRawData()
   uint16_t red, green, blue, clear_val;
@@ -116,34 +109,10 @@ Object ObjectFeatureExtraction() {
   currObject.green = (int)g;
   currObject.blue = (int)b;
   
-  return currObject; 
 }
 
-/*
-
-float Standardize(float original_value, float min_value, float max_value) {
-  float standardized;
-  standardized = (original_value - min_value)/(max_value - min_value);
-  return standardized;
-}
-
-void StandardizeObject(Object &currObject, Object (&knownObjects)[NUM_OF_KNOWN_OBJECTS]) {
-  currObject.height = Standardize(currObject.height, HEIGHT_MIN, HEIGHT_MAX);
-  currObject.weight = Standardize(currObject.weight, WEIGHT_MIN, WEIGHT_MAX);
-  currObject.red = Standardize(currObject.red, RGB_MIN, RGB_MAX);
-  currObject.green = Standardize(currObject.green, RGB_MIN, RGB_MAX);
-  currObject.blue = Standardize(currObject.blue, RGB_MIN, RGB_MAX);
-
-  for(int i = 0; i < NUM_OF_KNOWN_OBJECTS; ++i) {
-    knownObjects[i].height = Standardize(knownObjects[i].height, HEIGHT_MIN, HEIGHT_MAX);
-    knownObjects[i].weight = Standardize(knownObjects[i].weight, WEIGHT_MIN, WEIGHT_MAX);
-    knownObjects[i].red = Standardize(knownObjects[i].red, RGB_MIN, RGB_MAX);
-    knownObjects[i].green = Standardize(knownObjects[i].green, RGB_MIN, RGB_MAX);
-    knownObjects[i].blue = Standardize(knownObjects[i].blue, RGB_MIN, RGB_MAX);
-  }
-}
-*/
-
+// Finds the patterns from the current object and compares them to patterns from the given objects
+// **
 String PatternRecognition(Object currObject, Object knownObjects[], size_t NUM_OF_KNOWN_OBJECTS) {
   
   Object kNearestObjects[K];
@@ -163,9 +132,10 @@ String PatternRecognition(Object currObject, Object knownObjects[], size_t NUM_O
   
   // For testing purposes
   for(int i = 0; i < NUM_OF_KNOWN_OBJECTS; ++i) {
-    Serial.println(ComputeDistance(currObject, knownObjects[i]));
+    Serial.println(ComputeDistanceofObjects(currObject, knownObjects[i]));
   }
-
+  
+  // The first K Object differences are added to the kNearestObjects array
   for(int i = 0; i < K; ++i) {
     kNearestObjects[i].height = abs(knownObjects[i].height - currObject.height);
     kNearestObjects[i].weight = abs(knownObjects[i].weight - currObject.weight);
@@ -196,10 +166,10 @@ String PatternRecognition(Object currObject, Object knownObjects[], size_t NUM_O
       temp_green = kNearestObjects[j].green;
       temp_blue = kNearestObjects[j].blue;
       */
-      //temp_dist = ComputeDistance(temp_height, temp_weight);
+      //temp_dist = ComputeDistanceofObjects(temp_height, temp_weight);
       
       //ISSUE MIGHT BE HERE
-      temp_dist = ComputeDistance(currObject, kNearestObjects[j]);
+      temp_dist = ComputeDistanceofObjects(currObject, kNearestObjects[j]);
       
       if(temp_dist > max_diff) { // Update max
         max_diff = temp_dist;
@@ -213,8 +183,8 @@ String PatternRecognition(Object currObject, Object knownObjects[], size_t NUM_O
     temp_red = abs(knownObjects[i].red - currObject.red);
     temp_green = abs(knownObjects[i].green - currObject.green);
     temp_blue = abs(knownObjects[i].blue - currObject.blue);
-    //temp_dist = ComputeDistance(temp_height, temp_weight);
-    temp_dist = ComputeDistance(currObject, knownObjects[i]);
+    //temp_dist = ComputeDistanceofObjects(temp_height, temp_weight);
+    temp_dist = ComputeDistanceofObjects(currObject, knownObjects[i]);
     
     if(temp_dist < max_diff) {
       // Replace the existing neighbor having max_diff, by the current known object, in the K nearest neighbors array
@@ -232,7 +202,7 @@ String PatternRecognition(Object currObject, Object knownObjects[], size_t NUM_O
   /*
   for(int i = 0; i < K; ++i) {
     Serial.println(kNearestObjects[i].type);
-    Serial.println(ComputeDistance(currObject, kNearestObjects[i]));
+    Serial.println(ComputeDistanceofObjects(currObject, kNearestObjects[i]));
   }
   */
 
@@ -256,6 +226,8 @@ String PatternRecognition(Object currObject, Object knownObjects[], size_t NUM_O
   return max_type;
 }
 
+// Prints the type of object that is being passed through the project
+// **
 void Actuation(String object) {
   if(object != "") {
     Serial.print("\t");
@@ -306,7 +278,7 @@ void loop() {
   Object currObject; 
   String closestObject;
     
-  currObject = ObjectFeatureExtraction();
+  ObjectFeatureExtraction(currObject);
   // Testing purposes
   /*
   Serial.print("Test: ");

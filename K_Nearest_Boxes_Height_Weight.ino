@@ -1,7 +1,6 @@
 //Distance Sensor   UPDATE
 //Feature is height
 //Pre-known object of different heights
-//Pattern is see what the object is closest to.
 #include <Arduino.h>
 #include <NewPing.h>
 #include <HX711.h>
@@ -49,17 +48,8 @@ const int RGB_MIN = 0;
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, DISTANCE_SENSOR_MAX_DISTANCE);
 HX711 scale(DOUT, CLK);
 
-float ComputeDistance(float a, float b) {
-  float c;
-  c = a*a + b*b;
-  c = sqrt(c);
-  // Nearest 100ths place
-  c = roundf(c * 100.0) / 100.0;
-  
-  return c;
-}
-
-float ComputeDistance(Object currObject, Object knownObject) {
+//  Computes the euclidean distance between the known and the current object's features
+float ComputeDistanceofObjects(Object currObject, Object knownObject) {
   float height = currObject.height - knownObject.height;
   float weight = currObject.weight - knownObject.weight;
   float red = currObject.red - knownObject.red;
@@ -74,9 +64,11 @@ float ComputeDistance(Object currObject, Object knownObject) {
   return dist;
 }
 
-Object ObjectFeatureExtraction() {
+
+// Takes the features from the current object and converts them to strings and integers
+// **
+void ObjectFeatureExtraction(Object &currObject) {
   // Pass in an object (Pass by pointer) (Maybe?)
-  Object currObject;
   int currDistance;
   //Need a fourth value for getRawData()
   uint16_t red, green, blue, clear_val;
@@ -108,8 +100,6 @@ Object ObjectFeatureExtraction() {
   currObject.red = (int)r;
   currObject.green = (int)g;
   currObject.blue = (int)b;
-  
-  return currObject; 
 }
 
 float Standardize(float original_value, float min_value, float max_value) {
@@ -134,6 +124,8 @@ void StandardizeObject(Object &currObject, Object (&knownObjects)[NUM_OF_KNOWN_O
   }
 }
 
+// Finds the patterns from the current object and compares them to patterns from the given objects
+// **
 String PatternRecognition(Object currObject, Object knownObjects[]) {
   
   Object kNearestObjects[K];
@@ -153,7 +145,7 @@ String PatternRecognition(Object currObject, Object knownObjects[]) {
   
   // For testing purposes
   for(int i = 0; i < NUM_OF_KNOWN_OBJECTS; ++i) {
-    Serial.println(ComputeDistance(currObject, knownObjects[i]));
+    Serial.println(ComputeDistanceofObjects(currObject, knownObjects[i]));
   }
 
   for(int i = 0; i < K; ++i) {
@@ -186,10 +178,10 @@ String PatternRecognition(Object currObject, Object knownObjects[]) {
       temp_green = kNearestObjects[j].green;
       temp_blue = kNearestObjects[j].blue;
       */
-      //temp_dist = ComputeDistance(temp_height, temp_weight);
+      //temp_dist = ComputeDistanceofObjects(temp_height, temp_weight);
       
       //ISSUE MIGHT BE HERE
-      temp_dist = ComputeDistance(currObject, kNearestObjects[j]);
+      temp_dist = ComputeDistanceofObjects(currObject, kNearestObjects[j]);
       
       if(temp_dist > max_diff) { // Update max
         max_diff = temp_dist;
@@ -203,8 +195,8 @@ String PatternRecognition(Object currObject, Object knownObjects[]) {
     temp_red = abs(knownObjects[i].red - currObject.red);
     temp_green = abs(knownObjects[i].green - currObject.green);
     temp_blue = abs(knownObjects[i].blue - currObject.blue);
-    //temp_dist = ComputeDistance(temp_height, temp_weight);
-    temp_dist = ComputeDistance(currObject, knownObjects[i]);
+    //temp_dist = ComputeDistanceofObjects(temp_height, temp_weight);
+    temp_dist = ComputeDistanceofObjects(currObject, knownObjects[i]);
     
     if(temp_dist < max_diff) {
       // Replace the existing neighbor having max_diff, by the current known object, in the K nearest neighbors array
@@ -221,7 +213,7 @@ String PatternRecognition(Object currObject, Object knownObjects[]) {
   /*
   for(int i = 0; i < K; ++i) {
     Serial.println(kNearestObjects[i].type);
-    Serial.println(ComputeDistance(currObject, kNearestObjects[i]));
+    Serial.println(ComputeDistanceofObjects(currObject, kNearestObjects[i]));
   }
   */
 
@@ -245,6 +237,8 @@ String PatternRecognition(Object currObject, Object knownObjects[]) {
   return max_type;
 }
 
+// Prints the type of object that is being passed through the project
+// **
 void Actuation(String object) {
   if(object != "") {
     Serial.print("\t");
@@ -291,8 +285,9 @@ void loop() {
   
   Object currObject; 
   String closestObject;
-    
-  //currObject = ObjectFeatureExtraction();
+
+  // Removed for testing purposes
+  //ObjectFeatureExtraction(currObject);
   Serial.print("Test: ");
   Serial.println(test);
   currObject = testObjects[test];
