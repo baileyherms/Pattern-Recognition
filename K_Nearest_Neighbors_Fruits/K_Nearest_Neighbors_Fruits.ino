@@ -51,8 +51,11 @@ void ObjectFeatureExtraction(Object &currObject) {
   uint16_t r, g, b, c, colorTemp, lux;
   
   // Get weight feature (in lbs) to the nearest 100ths place
-  currObject.weight = scale.get_units()*1000.0;
+  // Gets the average of 5 readings minus the tare weight
+  // Need to debug with fruits
+  currObject.weight = (scale.get_units(5), 1)*1000.0;
   
+  // Get color feature
   tcs.getRawData(&r, &g, &b, &c);
   colorTemp = tcs.calculateColorTemperature(r, g, b);
   lux = tcs.calculateLux(r, g, b);
@@ -70,7 +73,6 @@ void ObjectFeatureExtraction(Object &currObject) {
   tcs.setInterrupt(true);
   // turn on LED
   */
-  
   
   // Converts the values to 0-255
   red = r;
@@ -114,17 +116,9 @@ float ComputeDistanceofColors(Object currObject, Object knownObject) {
 
 // Computes the euclidean distance between the known and the current object's features
 float ComputeDistanceofObjects(Object currObject, Object knownObject) {
-  // RescaleObject(&currObject);
-  // RescaleObject(&knownObject);
   float weight = (currObject.weight - knownObject.weight);
-  /*
-  int r = (currObject.r - knownObject.r);
-  int g = (currObject.g - knownObject.g);
-  int b = (currObject.b - knownObject.b);
-  */
   float color_dist = ComputeDistanceofColors(currObject, knownObject);
   float dist = weight*weight + color_dist*color_dist;
-  //  dist = sqrt(dist);
   
   return dist;
 }
@@ -331,26 +325,6 @@ void loop() {
   bool IR_Sensor1;
   String closestObject;
   
-  // Testing
-  /*
-  Serial.println("Fruit Detected");
-  
-  delay(500);
-  
-  digitalWrite(LED_BUILTIN, HIGH);
-  Object currObject;
-  
-  ObjectFeatureExtraction(currObject);
-
-  closestObject = ObjectPatternRecognition(currObject, knownObjects);
-
-  Actuation(closestObject);
-  
-  wait = true;
-
-  delay(1000);
-  */
-  
   IR_Sensor1 = digitalRead(IR_SENSOR_PIN_1);
   
   // Sensor was tripped and wasn't right before.
@@ -383,5 +357,4 @@ void loop() {
   }
   
 }
-
 

@@ -7,8 +7,8 @@ typedef struct {
   String type;
   float height;
   float width;
-  float length;
-  //float weight;
+  //float length;
+  float weight;
   //float red;
   //float green;
   //float blue;
