@@ -5,7 +5,7 @@ Pattern Recognition project that uses the Arduino Mega to integrate pattern reco
 To replicate this project, you will need:
 * Arduino Mega
 * Arduino IDE (1.8.5)
-** Arduino Web Editor can work as well.
+  * Arduino Web Editor can work as well.
 * Breadboards (4)
 * Ultrasonic Distance Sensors (5)
 * IR Breakbeam Sensors (1 pair)
