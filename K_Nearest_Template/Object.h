@@ -3,7 +3,7 @@
 
 #include "Arduino.h"
 
-// FIXME: Remove features that aren't needed
+// FIXME: Add and remove features
 typedef struct {
   String type;
   float height;
@@ -16,4 +16,3 @@ typedef struct {
 
 
 #endif
-
