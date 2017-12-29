@@ -30,8 +30,8 @@ Object knownObjects[NUM_OF_KNOWN_OBJECTS];
 
 // Define max height/weight/etc.
 // FIXME: For each feature
-const int [feature]_MAX = [number];
 const int [feature]_MIN = [number];
+const int [feature]_MAX = [number];
 
 // Takes the features from the current object and converts them to strings and integers
 // **
@@ -121,6 +121,7 @@ String ObjectPatternRecognition(Object currObject, Object knownObjects[]) {
       kNearestObjects[max_index].type = knownObjects[i].type;
       // FIXME: For each feature
       kNearestObjects[max_index].[feature] = knownObjects[i].[feature];
+    }
   }
 
   // For testing purposes
@@ -175,8 +176,6 @@ void setup() {
   digitalWrite(IR_SENSOR_PIN_1, HIGH);
   
   // Setup any features that need it
-  
-  String closestObject;
 }
 
 void loop() {
