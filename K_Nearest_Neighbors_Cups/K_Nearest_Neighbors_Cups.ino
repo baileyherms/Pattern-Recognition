@@ -297,7 +297,7 @@ void loop() {
   
   // Sensor was tripped and wasn't right before.
   if(IR_Sensor1 == LOW && !wait) {
-    Serial.println("Box Detected");
+    Serial.println("Cup Detected");
     
     delay(2000);
     
