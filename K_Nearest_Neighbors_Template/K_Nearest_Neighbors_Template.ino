@@ -12,10 +12,6 @@
 #define TRIGGER_PIN_1 12
 #define ECHO_PIN_1 11
 
-int test = 0;
-
-bool wait = false;
-
 // Define anything else needed for sensors
 // IR Sensor
 #define IR_SENSOR_PIN_1 6
@@ -187,6 +183,7 @@ void loop() {
 
   // FIXME: Change how object is detected.
   bool IR_Sensor1;
+  bool wait = false;
   IR_Sensor1 = digitalRead(IR_SENSOR_PIN_1);
   
   // Sensor was tripped and wasn't right before.
