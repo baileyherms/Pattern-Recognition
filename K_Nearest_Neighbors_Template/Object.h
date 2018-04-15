@@ -5,8 +5,8 @@
 
 // FIXME: Remove features that aren't needed
 typedef struct {
-  String type;
-  float height;
+    String category;
+    float height;
 } Object;
 
 

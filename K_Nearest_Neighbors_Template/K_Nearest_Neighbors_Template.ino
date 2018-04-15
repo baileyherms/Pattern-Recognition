@@ -2,19 +2,32 @@
 #include <math.h>
 // FIXME: Add the libraries needed for each pin
 #include <NewPing.h>
-
 #include "Object.h"
-
-// Define Pins for each sensor
-// Distance Sensor (Height)
-
-// Height
-#define TRIGGER_PIN_1 12
-#define ECHO_PIN_1 11
 
 // Define anything else needed for sensors
 // IR Sensor
 #define IR_SENSOR_PIN_1 6
+
+// Define Pins for each sensor
+// Distance Sensor (Height)
+#define TRIGGER_PIN_1 12
+#define ECHO_PIN_1 11
+
+// FIXME: Change object categories
+const size_t NUM_OF_CATEGORIES = 3;
+String ObjectCategories[NUM_OF_CATEGORIES] = {"Small", "Medium", "Large"};
+
+bool wait = false;
+
+// Define max height/weight/etc.
+// FIXME: For each feature
+// const int [sensor]_MAX_[feature] = [number];
+// const int [sensor]_MIN_[feature] = [number];
+const int DISTANCE_SENSOR_MAX_HEIGHT = 39;
+const int DISTANCE_SENSOR_MIN_HEIGHT = 2;
+
+// FIXME: Setup sensors if necessary
+NewPing sonar_height(TRIGGER_PIN_1, ECHO_PIN_1, DISTANCE_SENSOR_MAX_HEIGHT);
 
 // K Nearest Neighbors
 // FIXME: Change when necessary
@@ -22,197 +35,217 @@ const int K = 3;
 
 // FIXME: Change when necessary
 const size_t NUM_OF_KNOWN_OBJECTS = 9;
-const size_t NUM_OF_OBJECT_TYPES = 3;
-
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
 
-// FIXME: Change object types
-String Known_Object_Types[NUM_OF_OBJECT_TYPES] = {"Small", "Medium", "Large"};
+/*
+    Known Objects Preperation
+*/
 
-// Define max height/weight/etc.
-// FIXME: For each feature
-// const int [feature]_MAX = [number];
-// const int [feature]_MIN = [number];
-const int DISTANCE_SENSOR_MAX_HEIGHT = 39;
-const int DISTANCE_SENSOR_MIN_HEIGHT = 2;
+// Rescale a value to 0-1 range
+float RescaleValue(float value, const float min, const float max) {
+    return (value-min)/(max-min);
+}
 
-// FIXME: Setup sensors if necessary
-NewPing sonar_height(TRIGGER_PIN_1, ECHO_PIN_1, DISTANCE_SENSOR_MAX_HEIGHT);
+// Rescale object features to 1-0 range
+Object RescaleObject(Object object) {
+    Object rescaledObject;
+    rescaledObject.category = object.category;
+    rescaledObject.height = RescaleValue(object.height, DISTANCE_SENSOR_MIN_HEIGHT, DISTANCE_SENSOR_MAX_HEIGHT);
+    return rescaledObject;
+}
+
+/*
+    Populating known objects
+*/
+
+// Add an object to the known objects array
+// Change for each object (may need to add eight, colors, etc.)
+void AddToKnownObjects(int i, char* category, float height) {
+    knownObjects[i].category = category;
+    knownObjects[i].height = height;
+    knownObjects[i] = RescaleObject(knownObjects[i]);
+}
+
+// Insert all Known objects into the array
+void PopulateKnownObjects() {
+    // FIXME: Change for every test object.
+    /* 
+    AddToKnownObjects(#, "[category]", [height]);
+    */
+    AddToKnownObjects(0, "Small", 8.0);
+}
+
+/*
+    Feature Extraction
+*/
+
+// Takes the features from the current object and converts them to strings and integers
+Object FeatureExtraction() {
+    Object inputObject;
+
+    // Define necessary variables for height/weight/etc.
+    int currHeight;
+
+    // Read features from sensors (ex: sonar.ping_cm())
+    currHeight = sonar_height.ping_cm();
+
+    // Assign each of those features to inputObject.
+    inputObject.height = DISTANCE_SENSOR_MAX_HEIGHT - currHeight;
+
+    return RescaleObject(inputObject);
+}
 
 // Computes the euclidean distance between the known and the current object's rgb values
 // FIXME: Add function in if using a color sensor.
 /*
-float ComputeDistanceofColors(Object currObject, Object knownObject) {
-  float red = currObject.red - knownObject.red;
-  float green = currObject.green - knownObject.green;
-  float blue = currObject.blue - knownObject.blue;
-  float dist = pow(red, 2) + pow(green, 2) + pow(blue, 2);
-  dist = roundf(dist* 100.0) / 100.0;
-  return dist;
+float ComputeDistanceofColors(Object inputObject, Object knownObject) {
+    float red = inputObject.red - knownObject.red;
+    float green = inputObject.green - knownObject.green;
+    float blue = inputObject.blue - knownObject.blue;
+    float dist = pow(red, 2) + pow(green, 2) + pow(blue, 2);
+    dist = sqrt(dist);
+    return dist;
 }
 */
 
 // Computes the euclidean distance between the known and the current object's features
 // Can add or remove features
-float ComputeDistanceofObjects(Object currObject, Object knownObject) {
-  // FIXME: For non-color features
-  //float [feature] = ((currObject.[feature] - knownObject.[feature]) - [feature]_MIN) / ([feature]_MAX - [feature]_MIN);
-  float height = (currObject.height - knownObject.height);
-  // FIXME (optional): For color feature
-  //float colorDistance = ComputeDistanceofColors(currObject, knownObject);
-  
-  // FIXME: For each feature
-  //float dist = pow([feature 1], 2) + pow([feature 2], 2) + pow([feature 3], 2);
-  float dist = height*height;
-  dist = sqrt(dist);
-  
-  // Nearest 100ths place
-  dist = roundf(dist * 100.0) / 100.0;
-  
-  return dist;
-}
-
-// Takes the features from the current object and converts them to strings and integers
-void ObjectFeatureExtraction(Object &currObject) {
-  int currDistance;
-  // Define necessary variables for height/weight/etc.
-  int currHeight;
-  
-  // Read features from sensors (ex: sonar.ping_cm())
-  currHeight = sonar_height.ping_cm();
-  
-  // Assign each of those features to currObject.
-  currObject.height = DISTANCE_SENSOR_MAX_HEIGHT - currHeight;
-}
-
-// Finds the patterns from the current object and compares them to patterns from the given objects
-String ObjectPatternRecognition(Object currObject, Object knownObjects[]) {
-  Object kNearestObjects[K];
-  int count = 0;
-  int max_count = 0;
-  String most_frequent_type;
-  
-  // The first K Object differences are added to the kNearestObjects array
-  for(int i = 0; i < K; ++i) {
-    kNearestObjects[i].type = knownObjects[i].type;
+float ComputeDistanceofObjects(Object inputObject, Object knownObject) {
+    // FIXME: For non-color features
+    //float [feature] = ((inputObject.[feature] - knownObject.[feature]) - [feature]_MIN) / ([feature]_MAX - [feature]_MIN);
+    float height = (inputObject.height - knownObject.height);
+    // FIXME (optional): For color feature
+    //float colorDistance = ComputeDistanceofColors(inputObject, knownObject);
     // FIXME: For each feature
-    //kNearestObjects[i].[feature] = abs(knownObjects[i].[feature] - currObject.[feature]);
-    kNearestObjects[i].height = knownObjects[i].height;
-  }  
-  
-  // Now, determine if each remaining object is among the K closest, and if so insert into array (thus dropping one obj)
-  for(int i = K; i < NUM_OF_KNOWN_OBJECTS; ++i) { // For each remaining known object
-    
-    // Find the current max difference (CHANGE TO DISTANCE, EVERYWHERE) in the K nearest objects
-    float max_diff_of_K_nearest = 0;
-    int max_index = 0;
-    int temp_dist = 0;
-
-    for(int j = 0; j < K; ++j) {
-      temp_dist = ComputeDistanceofObjects(currObject, kNearestObjects[j]);
-      
-      if(temp_dist > max_diff_of_K_nearest) { // Update max
-        max_diff_of_K_nearest = temp_dist;
-        max_index = j;
-      }
-    }
-    
-    // If the current known object's difference < the max difference in the current K nearest neighbors
-    temp_dist = ComputeDistanceofObjects(currObject, knownObjects[i]);
-    
-    if(temp_dist < max_diff_of_K_nearest) {
-      // Replace the existing neighbor having max_diff_of_K_nearest, by the current known object, in the K nearest neighbors array
-      kNearestObjects[max_index].type = knownObjects[i].type;
-      
-      // FIXME: For each feature
-      //kNearestObjects[max_index].[feature] = temp_[feature];
-      kNearestObjects[max_index].height = knownObjects[i].height;
-      max_diff_of_K_nearest = temp_dist;
-    }
-  }
-
-  // Find out which object type occurs the most
-  for(int i = 0; i < NUM_OF_OBJECT_TYPES; ++i) {
-    count = 0;
-    for(int j = 0; j < K; ++j) {
-      if(kNearestObjects[j].type == Known_Object_Types[i]) {
-        count++;
-      }
-    }
-    if(count > max_count) {
-      max_count = count;
-      most_frequent_type = Known_Object_Types[i];
-    }
-  }
-
-  return most_frequent_type;
+    //float dist = pow([feature 1], 2) + pow([feature 2], 2) + pow([feature 3], 2);
+    float dist = pow(height, 2);
+    dist = sqrt(dist);
+    return dist;
 }
+
+// Sorts all the provided distances from small to large
+void Sort(float *distances, String* categories) {
+    float temp_dist;
+    String temp_category;
+    for(int i = NUM_OF_KNOWN_OBJECTS - 1; i >= 0; --i) {
+        for(int j = 0; j < i; ++j) {
+            if(distances[i] < distances[j]) {
+                temp_dist = distances[i];
+                distances[i] = distances[j];
+                distances[j] = temp_dist;
+                temp_category = categories[i];
+                categories[i] = categories[j];
+                categories[j] = temp_category;
+            }
+        }
+    }
+}
+
+/*
+    K-Nearest Neighbors (KNN)
+*/
+
+// Implementation of KNN algorithm
+// It takes an input object and a list of known objects and predicts the category of the input object.
+String ClassifyKNN(Object inputObject, Object knownObjects[]) {
+    int count = 0;
+    int max_count = 0;
+    String most_frequent_category;
+    
+    Object kNearestObjects[K];
+    float distances[NUM_OF_CATEGORIES];
+    String categories[NUM_OF_CATEGORIES];
+    
+    Serial.print("Object height: ");
+    Serial.println(inputObject.height);
+
+    // Compute the distance of each known object to the input object
+    for(int i = 0; i < NUM_OF_KNOWN_OBJECTS; ++i) {
+        distances[i] = ComputeDistanceofObjects(inputObject, knownObjects[i]);
+        categories[i] = knownObjects[i].category;
+    }
+
+    // Sort distances in ascending order
+    Sort(distances, categories);
+
+    // Find out which object type occurs most frequently
+    for(int i = 0; i < NUM_OF_CATEGORIES; ++i) {
+        count = 0;
+        for(int j = 0; j < K; ++j) {
+            if(categories[j] == ObjectCategories[i]) {
+                count++;
+            }
+        }
+        if(count > max_count) {
+            max_count = count;
+            most_frequent_category = ObjectCategories[i];
+        }
+    }
+
+    return most_frequent_category;
+}
+
+/* 
+    Object Actuation
+*/
 
 // Prints the type of object that is being passed through the project
-void Actuation(String object) {
-  if(object != "") {
-    Serial.print("\t");
-    Serial.println(object);
-  }
-}
-
-void PopulateKnownObjects() {
-  // FIXME: Change for every test object.
-  /* 
-  knownObjects[#].type = [type];
-  knownObjects[#].height = [height];
-  */
-  knownObjects[0].type = "Small";
-  knownObjects[0].height = 8.0;
+void Actuation(String category) {
+    if(category != "") {
+        for(int i = 0; i < NUM_OF_CATEGORIES; ++i) {
+            if(category == ObjectCategories[i]) {
+                Serial.println(category);
+            }
+        }
+    }
 }
 
 void setup() {
-  PopulateKnownObjects();
-
-  // FIXME: Setup any features that need it
-  pinMode(TRIGGER_PIN_1, OUTPUT);
-  pinMode(ECHO_PIN_1, INPUT);
-  pinMode(IR_SENSOR_PIN_1, INPUT);
-  digitalWrite(IR_SENSOR_PIN_1, HIGH);
-  
-  Serial.begin(9600);
+    Serial.begin(9600);
+    PopulateKnownObjects();
+    
+    // FIXME: Setup any features that need it
+    pinMode(TRIGGER_PIN_1, OUTPUT);
+    pinMode(ECHO_PIN_1, INPUT);
+    pinMode(IR_SENSOR_PIN_1, INPUT);
+    digitalWrite(IR_SENSOR_PIN_1, HIGH);
 }
 
 void loop() {
-  String closestObject;
-
-  // FIXME: Change how object is detected.
-  bool IR_Sensor1;
-  bool wait = false;
-  IR_Sensor1 = digitalRead(IR_SENSOR_PIN_1);
-  
-  // Sensor was tripped and wasn't right before.
-  if(IR_Sensor1 == LOW && !wait) {
-    Serial.println("Object Detected");
+    String closest_object_category;
     
-    delay(2000);
+    // FIXME: Change how object is detected.
+    bool Detection_Sensor;
+    Detection_Sensor = digitalRead(IR_SENSOR_PIN_1);
     
-    digitalWrite(LED_BUILTIN, HIGH);
-    Object currObject;
+    // Sensor was tripped and wasn't right before.
+    if(Detection_Sensor == LOW && !wait) {
+        Serial.println("Object Detected");
+        
+        delay(2000);
+        
+        digitalWrite(LED_BUILTIN, HIGH);
+        
+        Object inputObject = FeatureExtraction();
     
-    ObjectFeatureExtraction(currObject);
-  
-    closestObject = ObjectPatternRecognition(currObject, knownObjects);
-  
-    Actuation(closestObject);
+        // Classification
+        closest_object_category = ClassifyKNN(inputObject, knownObjects);
     
-    wait = true;
-  
-    delay(1000);
-  }
-  // Sensor was tripped and was right before.
-  else if(IR_Sensor1 == LOW && wait) {
-    digitalWrite(LED_BUILTIN, LOW);
-  }
-  // Sensor was not tripped.
-  else if(IR_Sensor1 == HIGH){
-    digitalWrite(LED_BUILTIN, LOW);
-    wait = false;
-  }
+        // Actuation
+        Actuation(closest_object_category);
+        
+        wait = true;
+      
+        delay(1000);
+    }
+    // Sensor was tripped and was right before.
+    else if(Detection_Sensor == LOW && wait) {
+        digitalWrite(LED_BUILTIN, LOW);
+    }
+    // Sensor was not tripped.
+    else if(Detection_Sensor == HIGH){
+        digitalWrite(LED_BUILTIN, LOW);
+        wait = false;
+    }
 }
 
