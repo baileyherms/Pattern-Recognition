@@ -13,6 +13,14 @@ To replicate this project, you will need:
 * Hx711 Load Cell Amplifier
 * 10kG Load Cell
 
+## Libraries
+Libraries that you will need to download:
+* NewPing_v.1.9.0
+* HX711
+* Adafruit_TCS34725
+* Adafruit_Sensor
+* Adafruit_LIS3DH
+
 ## Installation
 This project requires either the [Arduino IDE (1.8.5)](https://www.arduino.cc/en/Main/Software) or the [Arduino Web Editor](https://create.arduino.cc/editor).
 
