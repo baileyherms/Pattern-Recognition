@@ -9,6 +9,4 @@ typedef struct {
     float height;
 } Object;
 
-
 #endif
-

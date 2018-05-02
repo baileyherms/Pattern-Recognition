@@ -14,7 +14,7 @@
 #define ECHO_PIN_1 11
 
 // FIXME: Change object categories
-const size_t NUM_OF_CATEGORIES = 3;
+const int NUM_OF_CATEGORIES = 3;
 String ObjectCategories[NUM_OF_CATEGORIES] = {"Small", "Medium", "Large"};
 
 bool wait = false;
@@ -34,7 +34,7 @@ NewPing sonar_height(TRIGGER_PIN_1, ECHO_PIN_1, DISTANCE_SENSOR_MAX_HEIGHT);
 const int K = 3;
 
 // FIXME: Change when necessary
-const size_t NUM_OF_KNOWN_OBJECTS = 9;
+const int NUM_OF_KNOWN_OBJECTS = 9;
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
 
 /*
@@ -60,7 +60,7 @@ Object RescaleObject(Object object) {
 
 // Add an object to the known objects array
 // Change for each object (may need to add eight, colors, etc.)
-void AddToKnownObjects(int i, char* category, float height) {
+void AddToKnownObjects(int i, String category, float height) {
     knownObjects[i].category = category;
     knownObjects[i].height = height;
     knownObjects[i] = RescaleObject(knownObjects[i]);
@@ -124,7 +124,7 @@ float ComputeDistanceofObjects(Object inputObject, Object knownObject) {
 }
 
 // Sorts all the provided distances from small to large
-void Sort(float *distances, String* categories) {
+void Sort(float* distances, String* categories) {
     float temp_dist;
     String temp_category;
     for(int i = NUM_OF_KNOWN_OBJECTS - 1; i >= 0; --i) {
@@ -153,8 +153,8 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     String most_frequent_category;
     
     Object kNearestObjects[K];
-    float distances[NUM_OF_CATEGORIES];
-    String categories[NUM_OF_CATEGORIES];
+    float distances[NUM_OF_KNOWN_OBJECTS];
+    String categories[NUM_OF_KNOWN_OBJECTS];
     
     Serial.print("Object height: ");
     Serial.println(inputObject.height);

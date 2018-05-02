@@ -10,10 +10,11 @@
 #define CLK 2
 
 // Category definitions
-const size_t NUM_OF_CATEGORIES = 4;
+const int NUM_OF_CATEGORIES = 4;
 String ObjectCategories[NUM_OF_CATEGORIES] = {"Apple", "Orange", "Pear", "Lemon"};
 
 bool wait = false;
+int test_num = 0;
 
 const float WEIGHT_MAX = 300.0;
 const float WEIGHT_MIN = 100.0;
@@ -34,7 +35,7 @@ Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS3472
 // Weight Sensor
 HX711 scale(DOUT, CLK);
 
-const size_t NUM_OF_KNOWN_OBJECTS = 12;
+const int NUM_OF_KNOWN_OBJECTS = 12;
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
 
 /*
@@ -62,7 +63,7 @@ Object RescaleObject(Object object) {
 */
 
 // Add an object to the known objects array
-void AddToKnownObjects(int i, char* category, float weight, float r, float g, float b) {
+void AddToKnownObjects(int i, String category, float weight, float r, float g, float b) {
     knownObjects[i].category = category;
     knownObjects[i].weight = weight;
     knownObjects[i].r = r;
@@ -154,7 +155,7 @@ float ComputeDistanceofObjects(Object inputObject, Object knownObject) {
 }
 
 // Sorts all the provided distances from small to large
-void Sort(float *distances, String* categories) {
+void Sort(float* distances, String* categories) {
     float temp_dist;
     String temp_category;
     for(int i = NUM_OF_KNOWN_OBJECTS - 1; i >= 0; --i) {
@@ -256,6 +257,77 @@ void setup() {
 
     PopulateKnownObjects();
 }
+
+Object testCode(int& test_num) {
+    Object inputObject;
+
+    Serial.print("Test num: ");
+    Serial.println(test_num);
+    
+    switch(test_num) {
+      case 0: {
+        inputObject.weight = 228.0;
+        inputObject.r = 118;
+        inputObject.g = 76;
+        inputObject.b = 62;
+        inputObject = RescaleObject(inputObject);
+        test_num++;
+        break;
+      }
+      case 1: {
+        inputObject.weight = 270.0;
+        inputObject.r = 255;
+        inputObject.g = 139;
+        inputObject.b = 85;
+        inputObject = RescaleObject(inputObject);
+        test_num++;
+        break;
+      }
+      case 2: {
+        inputObject.weight = 154.0;
+        inputObject.r = 255;
+        inputObject.g = 229;
+        inputObject.b = 127;
+        inputObject = RescaleObject(inputObject);
+        test_num++;
+        break;
+      }
+      case 3: {
+        inputObject.weight = 217.0;
+        inputObject.r = 198;
+        inputObject.g = 183;
+        inputObject.b = 110;
+        inputObject = RescaleObject(inputObject);
+        test_num = 0;
+        break;
+      }
+      default:
+        break;
+    }
+    Serial.print("Test num: ");
+    Serial.println(test_num);
+
+    /*
+    AddToKnownObjects(0, "Apple", 228.0, 118, 76, 62);
+    AddToKnownObjects(1, "Apple", 216.0, 111, 80, 63);
+    AddToKnownObjects(2, "Apple", 224.0, 124, 80, 65);
+
+    AddToKnownObjects(3, "Orange", 270.0, 255, 139, 85);
+    AddToKnownObjects(4, "Orange", 257.0, 255, 140, 88);
+    AddToKnownObjects(5, "Orange", 250.0, 255, 128, 85);
+    
+    AddToKnownObjects(6, "Lemon", 154.0, 255, 229, 127);
+    AddToKnownObjects(7, "Lemon", 148.0, 255, 242, 139);
+    AddToKnownObjects(8, "Lemon", 141.0, 255, 255, 141);
+    
+    AddToKnownObjects(9, "Pear", 217.0, 198, 183, 110);
+    AddToKnownObjects(10, "Pear", 230.0, 172, 150, 90);
+    AddToKnownObjects(11, "Pear", 222.0, 207, 190, 109);
+    */
+    
+    return inputObject;
+}
+
 
 void loop() {
     bool Detection_Sensor;

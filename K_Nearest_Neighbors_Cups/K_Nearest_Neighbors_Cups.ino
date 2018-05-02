@@ -25,10 +25,11 @@
 #define DOUT 3
 #define CLK 2
 
-const size_t NUM_OF_CATEGORIES = 3;
+const int NUM_OF_CATEGORIES = 3;
 String ObjectCategories[NUM_OF_CATEGORIES] = {"Travel Mug", "11oz Mug", "16oz Mug"};
 
 bool wait = false;
+int test_num = 0;
 
 // Needs to be int for the distance sensor.
 //const int DISTANCE_SENSOR_DISTANCE_SENSOR_HEIGHT_MAX = 100;
@@ -55,7 +56,7 @@ NewPing sonar_width_1(TRIGGER_PIN_2, ECHO_PIN_2, DISTANCE_SENSOR_WIDTH_MAX);
 NewPing sonar_width_2(TRIGGER_PIN_3, ECHO_PIN_3, DISTANCE_SENSOR_WIDTH_MAX);
 HX711 scale(DOUT, CLK);
 
-const size_t NUM_OF_KNOWN_OBJECTS = 9;
+const int NUM_OF_KNOWN_OBJECTS = 9;
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
 
 /*
@@ -83,7 +84,7 @@ Object RescaleObject(Object object) {
 
 // Add an object to the known objects array
 // Change for each object (may need to add eight, colors, etc.)
-void AddToKnownObjects(int i, char* category, float height, float width, float weight) {
+void AddToKnownObjects(int i, String category, float height, float width, float weight) {
     knownObjects[i].category = category;
     knownObjects[i].height = height;
     knownObjects[i].width = width;
@@ -150,10 +151,10 @@ float ComputeDistanceofObjects(Object inputObject, Object knownObject) {
 }
 
 // Sorts all the provided distances from small to large
-void Sort(float *distances, String* categories) {
+void Sort(float* distances, String* categories) {
     float temp_dist;
     String temp_category;
-    for(int i = NUM_OF_CATEGORIES - 1; i >= 0; --i) {
+    for(int i = NUM_OF_KNOWN_OBJECTS - 1; i >= 0; --i) {
         for(int j = 0; j < i; ++j) {
             if(distances[i] < distances[j]) {
                 temp_dist = distances[i];
@@ -179,8 +180,8 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     String most_frequent_category;
     
     Object kNearestObjects[K];
-    float distances[NUM_OF_CATEGORIES];
-    String categories[NUM_OF_CATEGORIES];
+    float distances[NUM_OF_KNOWN_OBJECTS];
+    String categories[NUM_OF_KNOWN_OBJECTS];
     
     Serial.print("Object height: ");
     Serial.println(inputObject.height);
@@ -249,6 +250,66 @@ void setup() {
 
     pinMode(LED_BUILTIN, OUTPUT);
     PopulateKnownObjects();
+}
+
+Object testCode(int& test_num) {
+    Object inputObject;
+
+    Serial.print("Test num: ");
+    Serial.println(test_num);
+    
+    switch(test_num) {
+      case 0: {
+        inputObject.height = 18.5;
+        inputObject.width = 7.0;
+        inputObject.weight = 219.5;
+        inputObject = RescaleObject(inputObject);
+        test_num++;
+        break;
+      }
+      case 1: {
+        inputObject.height = 10.0;
+        inputObject.width = 8.0;
+        inputObject.weight = 351.3;
+        inputObject = RescaleObject(inputObject);
+        test_num++;
+        break;
+      }
+      case 2: {
+        inputObject.height = 15.0;
+        inputObject.width = 8.4;
+        inputObject.weight = 517.4;
+        inputObject = RescaleObject(inputObject);
+        test_num++;
+        break;
+      }
+      case 3: {
+        inputObject.height = 17.0;
+        inputObject.width = 8.0;
+        inputObject.weight = 250.0;
+        inputObject = RescaleObject(inputObject);
+        test_num = 0;
+        break;
+      }
+      default:
+        break;
+    }
+
+    /*
+    AddToKnownObjects(0, "Travel Mug", 18.5, 7.0, 219.5);
+    AddToKnownObjects(1, "Travel Mug", 17.0, 8.0, 250.0);
+    AddToKnownObjects(2, "Travel Mug", 19.0, 6.0, 210.0);
+    
+    AddToKnownObjects(3, "11oz Mug", 10.0, 8.0, 351.3);
+    AddToKnownObjects(4, "11oz Mug", 11.0, 7.0, 360.0);
+    AddToKnownObjects(5, "11oz Mug", 9.0, 9.0, 340.0);
+    
+    AddToKnownObjects(6, "16oz Mug", 15.0, 8.4, 517.4);
+    AddToKnownObjects(7, "16oz Mug", 16.0, 8.0, 500.0);
+    AddToKnownObjects(8, "16oz Mug", 14.0, 10.0, 530.0);
+    */
+    
+    return inputObject;
 }
 
 void loop() {

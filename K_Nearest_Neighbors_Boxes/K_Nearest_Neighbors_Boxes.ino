@@ -29,10 +29,11 @@
 #define ECHO_PIN_5 13
 
 // FIXME: Change object categories
-const size_t NUM_OF_CATEGORIES = 3;
+const int NUM_OF_CATEGORIES = 3;
 String ObjectCategories[NUM_OF_CATEGORIES] = {"Small", "Medium", "Large"};
 
 bool wait = false;
+int test_num = 0; // FIXME: Remove
 
 // Needs to be int for the distance sensor.
 //const int DISTANCE_SENSOR_MAX_HEIGHT = 100;
@@ -55,7 +56,7 @@ NewPing sonar_length_2(TRIGGER_PIN_5, ECHO_PIN_5, DISTANCE_SENSOR_MAX_LENGTH);
 // K Nearest Neighbors
 const int K = 3;
 
-const size_t NUM_OF_KNOWN_OBJECTS = 9;
+const int NUM_OF_KNOWN_OBJECTS = 9;
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
 
 /*
@@ -83,7 +84,7 @@ Object RescaleObject(Object object) {
 
 // Add an object to the known objects array
 // Change for each object (may need to add eight, colors, etc.)
-void AddToKnownObjects(int i, char* category, float height, float width, float length) {
+void AddToKnownObjects(int i, String category, float height, float width, float length) {
     knownObjects[i].category = category;
     knownObjects[i].height = height;
     knownObjects[i].width = width;
@@ -98,7 +99,7 @@ void PopulateKnownObjects() {
     AddToKnownObjects(2, "Small", 18.0, 18.0, 18.0);
     
     AddToKnownObjects(3, "Medium", 24.0, 20.0, 20.0);
-    AddToKnownObjects(4, "Medium", 28.0, 28.0, 28.0);
+    AddToKnownObjects(4, "Medium", 28.0, 26.0, 28.0);
     AddToKnownObjects(5, "Medium", 25.0, 18.0, 18.0);
     
     AddToKnownObjects(6, "Large", 30.0, 34.0, 34.0);
@@ -141,10 +142,10 @@ float ComputeDistanceofObjects(Object inputObject, Object knownObject) {
 }
 
 // Sorts all the provided distances from small to large
-void Sort(float *distances, String* categories) {
+void Sort(float* distances, String* categories) {
     float temp_dist;
     String temp_category;
-    for(int i = NUM_OF_CATEGORIES - 1; i >= 0; --i) {
+    for(int i = NUM_OF_KNOWN_OBJECTS - 1; i >= 0; --i) {
         for(int j = 0; j < i; ++j) {
             if(distances[i] < distances[j]) {
                 temp_dist = distances[i];
@@ -170,8 +171,8 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     String most_frequent_category;
   
     Object kNearestObjects[K];
-    float distances[NUM_OF_CATEGORIES];
-    String categories[NUM_OF_CATEGORIES];
+    float distances[NUM_OF_KNOWN_OBJECTS];
+    String categories[NUM_OF_KNOWN_OBJECTS];
     
     Serial.print("Object height: ");
     Serial.println(inputObject.height);
@@ -244,20 +245,83 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
 }
 
+Object testCode(int& test_num) {
+    Object inputObject;
+
+    Serial.print("Test num: ");
+    Serial.println(test_num);
+    
+    switch(test_num) {
+      case 0: {
+        inputObject.height = 8;
+        inputObject.width = 10;
+        inputObject.length = 10;
+        inputObject = RescaleObject(inputObject);
+        test_num++;
+        break;
+      }
+      case 1: {
+        inputObject.height = 28;
+        inputObject.width = 26;
+        inputObject.length = 28;
+        inputObject = RescaleObject(inputObject);
+        test_num++;
+        break;
+      }
+      case 2: {
+        inputObject.height = 28;
+        inputObject.width = 32;
+        inputObject.length = 32;
+        inputObject = RescaleObject(inputObject);
+        test_num++;
+        break;
+      }
+      case 3: {
+        inputObject.height = 18;
+        inputObject.width = 18;
+        inputObject.length = 18;
+        inputObject = RescaleObject(inputObject);
+        test_num = 0;
+        break;
+      }
+      default:
+        break;
+    }
+    Serial.print("Test num: ");
+    Serial.println(test_num);
+
+    /*
+    AddToKnownObjects(0, "Small", 8.0, 10.0, 10.0);
+    AddToKnownObjects(1, "Small", 15.0, 15.0, 15.0);
+    AddToKnownObjects(2, "Small", 18.0, 18.0, 18.0);
+    
+    AddToKnownObjects(3, "Medium", 24.0, 20.0, 20.0);
+    AddToKnownObjects(4, "Medium", 28.0, 26.0, 28.0);
+    AddToKnownObjects(5, "Medium", 25.0, 18.0, 18.0);
+    
+    AddToKnownObjects(6, "Large", 30.0, 34.0, 34.0);
+    AddToKnownObjects(7, "Large", 28.0, 32.0, 32.0);
+    AddToKnownObjects(8, "Large", 32.0, 36.0, 36.0);
+    */
+    
+    return inputObject;
+}
+
 void loop() {
     bool Detection_Sensor;
     String closest_object_category;
     Detection_Sensor = digitalRead(IR_SENSOR_PIN_1);
 
     // Sensor was tripped and wasn't right before.
-    if(Detection_Sensor == LOW && !wait) {
+    //if(Detection_Sensor == LOW && !wait) { // FIXME: Remove
         Serial.println("Box Detected");
 
         delay(2000);
 
         digitalWrite(LED_BUILTIN, HIGH);
 
-        Object inputObject = FeatureExtraction();
+        //Object inputObject = FeatureExtraction(); // FIXME: Put back
+        Object inputObject = testCode(test_num); // FIXME: Remove
 
         closest_object_category = ClassifyKNN(inputObject, knownObjects);
 
@@ -266,7 +330,8 @@ void loop() {
         wait = true;
 
         delay(1000);
-    }
+    //} // FIXME: Remove
+    /* // FIXME: Remove
     // Sensor was tripped and was right before.
     else if(Detection_Sensor == LOW && wait) {
         digitalWrite(LED_BUILTIN, LOW);
@@ -276,6 +341,7 @@ void loop() {
         digitalWrite(LED_BUILTIN, LOW);
         wait = false;
     }
+    */ // FIXME: Remove
 }
 
 
