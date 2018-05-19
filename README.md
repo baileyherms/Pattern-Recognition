@@ -12,6 +12,7 @@ To replicate this project, you will need:
 * RGB Color Sensor
 * Hx711 Load Cell Amplifier
 * 10kG Load Cell
+* LIS3DH Accelerometer
 
 ## Libraries
 Libraries that you will need to download:
