@@ -1,28 +1,39 @@
 #include <Arduino.h>
 #include <math.h>
+#include <LiquidCrystal.h>
+#include "Object.h"
+
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_LIS3DH.h>
 #include <Adafruit_Sensor.h>
-#include "Object.h"
 
+// LCD Screen
+const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+String lcd_current = "";
+
+// Accelerometer
 Adafruit_LIS3DH lis = Adafruit_LIS3DH();
 
+// Category definitions
 const int NUM_OF_CATEGORIES = 2;
 String ObjectCategories[NUM_OF_CATEGORIES] = {"Normal Shaking", "Abnormal Shaking"};
 
-int test_num = 0; //FIXME: Remove
+// Used for test code
+int test_num = 0;
 
-// Define max height/weight/etc.
-// FIXME: For each feature
-// Change the values!
+// Sensor MIN/MAX Values
 const float x_accel_diff_MIN = -10;
 const float x_accel_diff_MAX = 10;
+
 const float y_accel_diff_MIN = -10;
 const float y_accel_diff_MAX = 10;
+
 const float z_accel_diff_MIN = -12;
 const float z_accel_diff_MAX = 7.5;
 
+// Define Accelerometer Variables
 float x_resting_avg;
 float y_resting_avg;
 float z_resting_avg;
@@ -31,14 +42,16 @@ float x_tolerance;
 float y_tolerance;
 float z_tolerance;
 
-const int length_detect_values = 100; // how many values to detect
-const int time_between_values = 10; // in ms
+// Number of values to detect
+const int length_detect_values = 100;
+
+// Amount of time between values (ms)
+const int time_between_values = 10;
 
 // K Nearest Neighbors
-// FIXME: Change when necessary
 const int K = 3;
 
-// FIXME: Change when necessary
+// Setup knownObjects
 const int NUM_OF_KNOWN_OBJECTS = 8;
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
 
@@ -46,11 +59,12 @@ Object knownObjects[NUM_OF_KNOWN_OBJECTS];
     Known Objects Preperation
 */
 
+// Rescale a value to 0-1 range
 float RescaleValue(float value, const float min, const float max) {
     return (value-min)/(max-min);
 }
 
-// Rescale object features to 1-0 range
+// Rescale object features
 Object RescaleObject(Object object) {
     Object rescaledObject;
     rescaledObject.category = object.category;
@@ -97,14 +111,19 @@ void PopulateKnownObjects() {
 Object FeatureExtraction() {
     Object inputObject;
     
+    // Accelerometer set min/max
     float xMin = x_resting_avg - x_tolerance;
     float xMax = x_resting_avg + x_tolerance;
+    
     float yMin = y_resting_avg - y_tolerance;
     float yMax = y_resting_avg + y_tolerance;
+    
     float zMin = z_resting_avg - z_tolerance;
     float zMax = z_resting_avg + z_tolerance;
 
+    // Accelerometer definitions
     float xTemp, yTemp, zTemp;
+    
     // Get the max and min of x, y, and z for length_detect_values.
     for(int i = 0; i < length_detect_values; ++i) {
         lis.read();
@@ -138,22 +157,14 @@ Object FeatureExtraction() {
         delay(time_between_values);
     }
 
-    // Need to get the difference between max and resting and min and resting.
+    // Calculate the difference between max and resting and min and resting.
     inputObject.x_accel_diff = abs(abs(xMin - x_resting_avg) - abs(xMax - x_resting_avg));
     inputObject.y_accel_diff = abs(abs(yMin - y_resting_avg) - abs(yMax - y_resting_avg));
     inputObject.z_accel_diff = abs(abs(zMin - z_resting_avg) - abs(zMax - z_resting_avg));
+    
     Serial.print("X difference: "); Serial.println(inputObject.x_accel_diff);
     Serial.print("Y difference: "); Serial.println(inputObject.y_accel_diff);
     Serial.print("Z difference: "); Serial.println(inputObject.z_accel_diff);
-
-    // FIXME: Testing only.
-    Serial.print("X max: "); Serial.println(xMax);
-    Serial.print("Y max: "); Serial.println(yMax);
-    Serial.print("Z max: "); Serial.println(zMax);
-
-    Serial.print("X min: "); Serial.println(xMin);
-    Serial.print("Y min: "); Serial.println(yMin);
-    Serial.print("Z min: "); Serial.println(zMin);
     
     return RescaleObject(inputObject);
 }
@@ -164,7 +175,7 @@ float ComputeDistanceofObjects(Object inputObject, Object knownObject) {
     float y_accel_diff_dist = (inputObject.y_accel_diff - knownObject.y_accel_diff);
     float z_accel_diff_dist = (inputObject.z_accel_diff - knownObject.z_accel_diff);
     float dist = pow(x_accel_diff_dist, 2) + pow(y_accel_diff_dist, 2) + pow(z_accel_diff_dist, 2);
-
+    dist = sqrt(dist);
     return dist;
 }
 
@@ -204,9 +215,7 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     // Compute the distance of each known object to the input object
     for(int i = 0; i < NUM_OF_KNOWN_OBJECTS; ++i) {
         distances[i] = ComputeDistanceofObjects(inputObject, knownObjects[i]);
-        categories[i] = knownObjects[i].x_accel_diff;
-        categories[i] = knownObjects[i].y_accel_diff;
-        categories[i] = knownObjects[i].z_accel_diff;
+        categories[i] = knownObjects[i].category;
     }
 
     // Sort distances in ascending order
@@ -227,77 +236,6 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     }
 
     return most_frequent_category;
-    
-    // Need to test
-    /*
-    // First K known objects are the closest K, obviously, so just fill array
-    for(int i = 0; i < K; ++i) {
-        kNearestObjects[i].type = knownObjects[i].type;
-        kNearestObjects[i].x_accel_diff = knownObjects[i].x_accel_diff;
-        kNearestObjects[i].y_accel_diff = knownObjects[i].y_accel_diff;
-        kNearestObjects[i].z_accel_diff = knownObjects[i].z_accel_diff;
-    }
-  
-    // Now, determine if each remaining object is among the K closest, and if so insert into array (thus dropping one obj)
-    for(int i = K; i < NUM_OF_KNOWN_OBJECTS; ++i) { // For each remaining known object
-        int j;
-
-        // Find the current max difference in the K nearest objects
-        float max_diff_of_K_nearest = 0;
-        int max_index = 0;
-        float temp_dist = 0;
-
-        for(j = 0; j < K; ++j) {
-            // kNearest Objects is the difference between the currObject and the knownObjects
-            // ComputeDistanceofObjects should compute the total distance for kNearestObjects[j]
-            // May just add this to the above
-            temp_dist = ComputeDistanceofObjects(inputObject, kNearestObjects[j]);
-
-            if(temp_dist > max_diff_of_K_nearest) { // Update max
-                max_diff_of_K_nearest = temp_dist;
-                max_index = j;
-            }
-        }
-
-        // If the current known object's difference < the max difference in the current K nearest neighbors
-        temp_dist = ComputeDistanceofObjects(inputObject, knownObjects[i]);
-
-        if(temp_dist < max_diff_of_K_nearest) {
-            // Replace the existing neighbor having max_diff_of_K_nearest, by the current known object, in the K nearest neighbors array
-            kNearestObjects[max_index].type = knownObjects[i].type;
-            // FIXME: For each feature
-            kNearestObjects[max_index].x_accel_diff = knownObjects[i].x_accel_diff;
-            kNearestObjects[max_index].y_accel_diff = knownObjects[i].y_accel_diff;
-            kNearestObjects[max_index].z_accel_diff = knownObjects[i].z_accel_diff;
-        }
-    }
-
-    // For testing purposes
-    for(int i = 0; i < K; ++i) {
-        Serial.println(kNearestObjects[i].type);
-        // FIXME: For each feature
-        Serial.println(kNearestObjects[i].x_accel_diff);
-        Serial.println(kNearestObjects[i].y_accel_diff);
-        Serial.println(kNearestObjects[i].z_accel_diff);
-    }
-
-    // Find out which object type occurs most frequently
-    for(int i = 0; i < NUM_OF_CATEGORIES; ++i) {
-        int j;
-        count = 0;
-        for(j = 0; j < K; ++j) {
-            if(kNearestObjects[j].type == ObjectCategories[i]) {
-            count++;
-            }
-        }
-        if(count > max_count) {
-            max_count = count;
-            most_frequent_type = ObjectCategories[i];
-        }
-    }
-
-    return most_frequent_type;
-    */
 }
 
 /* 
@@ -310,11 +248,22 @@ void Actuation(String category) {
         for(int i = 0; i < NUM_OF_CATEGORIES; ++i) {
             if(category == ObjectCategories[i]) {
                 Serial.println(category);
+                
+                // If the category has changed, print the new category to LCD
+                if(lcd_current != category) {
+                  lcd.setCursor(0,0);
+                  lcd.print("                ");
+                  lcd.setCursor(0,0);
+                  lcd.print(category);
+                  delay(500);
+                  lcd_current = category;
+                }
             }
         }
     }
 }
 
+// Accelerometer Calibration
 void CalibrateSystem() {
     Serial.println("Calibrating System, do not move machine.");
 
@@ -389,9 +338,14 @@ void CalibrateSystem() {
 
 void setup() {
     Serial.begin(9600);
+    
     PopulateKnownObjects();
     
-    if (! lis.begin(0x18)) {   // change this to 0x19 for alternative i2c address
+    // LCD Screen
+    lcd.begin(16,2);
+    
+    // Accelerometer
+    if (! lis.begin(0x18)) {
         Serial.println("Couldnt start");
         while (1);
     }
@@ -402,6 +356,9 @@ void setup() {
     CalibrateSystem();
 }
 
+// Can be used to test objects without sensors
+// Need to change loop() to use this.
+/*
 Object testCode(int& test_num) {
     Object inputObject;
 
@@ -446,24 +403,10 @@ Object testCode(int& test_num) {
     }
     Serial.print("Test num: ");
     Serial.println(test_num);
-
-    /*
-    // Even indices for "Normal Shaking"
-    AddToKnownObjects(0, "Normal Shaking", 0.26, 0.15, 0.27);
-    AddToKnownObjects(2, "Normal Shaking", 0.31, 0.74, 1.11);
-    AddToKnownObjects(4, "Normal Shaking", 0.19, 2.46, 2.35);
-    AddToKnownObjects(6, "Normal Shaking", 0.29, 2.47, 1.59);
-    
-    // Odd indices for "Abnormal Shaking"
-    AddToKnownObjects(1, "Abnormal Shaking", 4.74, 1.60, 6.74);
-    AddToKnownObjects(3, "Abnormal Shaking", 2.06, 4.61, 12.33);
-    AddToKnownObjects(5, "Abnormal Shaking", 6.31, 2.11, 8.31);
-    AddToKnownObjects(7, "Abnormal Shaking", 3.82, 4.42, 8.67);
-    */
     
     return inputObject;
 }
-
+*/
 
 void loop() {
     String closest_object_category;
@@ -475,4 +418,18 @@ void loop() {
     Actuation(closest_object_category);
 
     delay(1000);
+    
+    // Test Code without sensors
+    // Comment out above code
+    /*
+    String closest_object_category;
+    
+    Object inputObject = FeatureExtraction();
+
+    closest_object_category = ClassifyKNN(inputObject, knownObjects);
+
+    Actuation(closest_object_category);
+
+    delay(1000);
+    */
 }

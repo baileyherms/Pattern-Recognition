@@ -5,12 +5,10 @@
 
 typedef struct {
     String category;
-    float weight; // In grams
+    float weight;
     float r;
     float g;
     float b;
 } Object;
 
-
 #endif
-

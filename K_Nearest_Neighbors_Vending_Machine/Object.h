@@ -3,7 +3,6 @@
 
 #include "Arduino.h"
 
-// FIXME: Add and remove features
 typedef struct {
     String category;
     float x_accel_diff;

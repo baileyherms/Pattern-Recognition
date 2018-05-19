@@ -1,38 +1,53 @@
 #include <Arduino.h>
 #include <math.h>
-// FIXME: Add the libraries needed for each pin
-#include <NewPing.h>
+#include <LiquidCrystal.h>
 #include "Object.h"
 
-// Define anything else needed for sensors
+// FIXME: Add necessary libraries
+#include <NewPing.h>
+
+// LCD Screen
+// FIXME: Change to fit LCD Screen wiring
+const int rs = 41, en = 39, d4 = 37, d5 = 35, d6 = 33, d7 = 31;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+String lcd_current = "";
+
+// FIXME: Define anything needed for sensors
+
 // IR Sensor
 #define IR_SENSOR_PIN_1 6
 
-// Define Pins for each sensor
-// Distance Sensor (Height)
+// Height Sensor
+// FIXME: Define Pins for each sensor
 #define TRIGGER_PIN_1 12
 #define ECHO_PIN_1 11
 
+// Category definitions
 // FIXME: Change object categories
 const int NUM_OF_CATEGORIES = 3;
 String ObjectCategories[NUM_OF_CATEGORIES] = {"Small", "Medium", "Large"};
 
 bool wait = false;
 
-// Define max height/weight/etc.
+// Used for test code
+int test_num = 0;
+
+// Sensor MIN/MAX Values
 // FIXME: For each feature
-// const int [sensor]_MAX_[feature] = [number];
-// const int [sensor]_MIN_[feature] = [number];
-const int DISTANCE_SENSOR_MAX_HEIGHT = 39;
-const int DISTANCE_SENSOR_MIN_HEIGHT = 2;
+// const int [sensor]_[feature]_MAX = [number];
+// const int [sensor]_[feature]_MIN = [number];
+const int DISTANCE_SENSOR_HEIGHT_MAX = 39;
+const int DISTANCE_SENSOR_HEIGHT_MIN = 2;
 
 // FIXME: Setup sensors if necessary
-NewPing sonar_height(TRIGGER_PIN_1, ECHO_PIN_1, DISTANCE_SENSOR_MAX_HEIGHT);
+// Distance Sensor
+NewPing sonar_height(TRIGGER_PIN_1, ECHO_PIN_1, DISTANCE_SENSOR_HEIGHT_MAX);
 
 // K Nearest Neighbors
 // FIXME: Change when necessary
 const int K = 3;
 
+// Setup knownObjects
 // FIXME: Change when necessary
 const int NUM_OF_KNOWN_OBJECTS = 9;
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
@@ -46,11 +61,12 @@ float RescaleValue(float value, const float min, const float max) {
     return (value-min)/(max-min);
 }
 
-// Rescale object features to 1-0 range
+// Rescale object features
 Object RescaleObject(Object object) {
     Object rescaledObject;
     rescaledObject.category = object.category;
-    rescaledObject.height = RescaleValue(object.height, DISTANCE_SENSOR_MIN_HEIGHT, DISTANCE_SENSOR_MAX_HEIGHT);
+    // FIXME: Add for each object
+    rescaledObject.height = RescaleValue(object.height, DISTANCE_SENSOR_HEIGHT_MIN, DISTANCE_SENSOR_HEIGHT_MAX);
     return rescaledObject;
 }
 
@@ -68,7 +84,7 @@ void AddToKnownObjects(int i, String category, float height) {
 
 // Insert all Known objects into the array
 void PopulateKnownObjects() {
-    // FIXME: Change for every test object.
+    // FIXME: Add for every test object.
     /* 
     AddToKnownObjects(#, "[category]", [height]);
     */
@@ -83,14 +99,18 @@ void PopulateKnownObjects() {
 Object FeatureExtraction() {
     Object inputObject;
 
-    // Define necessary variables for height/weight/etc.
+    // FIXME: Define necessary variables for height/weight/etc.
     int currHeight;
 
-    // Read features from sensors (ex: sonar.ping_cm())
+    // FIXME: Read features from sensors (ex: sonar.ping_cm())
     currHeight = sonar_height.ping_cm();
 
-    // Assign each of those features to inputObject.
-    inputObject.height = DISTANCE_SENSOR_MAX_HEIGHT - currHeight;
+    // FIXME: Assign each of those features to inputObject
+    inputObject.height = DISTANCE_SENSOR_HEIGHT_MAX - currHeight;
+    
+    // FIXME: Print each feature measurement
+    Serial.print("Height: ");
+    Serial.println(inputObject.height);
 
     return RescaleObject(inputObject);
 }
@@ -156,9 +176,6 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     float distances[NUM_OF_KNOWN_OBJECTS];
     String categories[NUM_OF_KNOWN_OBJECTS];
     
-    Serial.print("Object height: ");
-    Serial.println(inputObject.height);
-
     // Compute the distance of each known object to the input object
     for(int i = 0; i < NUM_OF_KNOWN_OBJECTS; ++i) {
         distances[i] = ComputeDistanceofObjects(inputObject, knownObjects[i]);
@@ -195,6 +212,16 @@ void Actuation(String category) {
         for(int i = 0; i < NUM_OF_CATEGORIES; ++i) {
             if(category == ObjectCategories[i]) {
                 Serial.println(category);
+                
+                // If the category has changed, print the new category to LCD
+                if(lcd_current != category) {
+                  lcd.setCursor(0,0);
+                  lcd.print("                ");
+                  lcd.setCursor(0,0);
+                  lcd.print(category);
+                  delay(500);
+                  lcd_current = category;
+                }
             }
         }
     }
@@ -202,14 +229,66 @@ void Actuation(String category) {
 
 void setup() {
     Serial.begin(9600);
+    
     PopulateKnownObjects();
     
     // FIXME: Setup any features that need it
-    pinMode(TRIGGER_PIN_1, OUTPUT);
-    pinMode(ECHO_PIN_1, INPUT);
+    // IR Sensor
     pinMode(IR_SENSOR_PIN_1, INPUT);
     digitalWrite(IR_SENSOR_PIN_1, HIGH);
+    
+    // Height
+    pinMode(TRIGGER_PIN_1, OUTPUT);
+    pinMode(ECHO_PIN_1, INPUT);
+
+    // Arduino Built-in LED
+    pinMode(LED_BUILTIN, OUTPUT);
 }
+
+// Can be used to test objects without sensors
+// Need to change loop() to use this.
+/*
+Object testCode(int& test_num) {
+    Object inputObject;
+
+    Serial.print("Test num: ");
+    Serial.println(test_num);
+    
+    switch(test_num) {
+      case 0: {
+        // FIXME: Change for each feature
+        inputObject.height = 8;
+        inputObject = RescaleObject(inputObject);
+        test_num++;
+        break;
+      }
+      case 1: {
+        inputObject.height = 28;
+        inputObject = RescaleObject(inputObject);
+        test_num++;
+        break;
+      }
+      case 2: {
+        inputObject.height = 28;
+        inputObject = RescaleObject(inputObject);
+        test_num++;
+        break;
+      }
+      case 3: {
+        inputObject.height = 18;
+        inputObject = RescaleObject(inputObject);
+        test_num = 0;
+        break;
+      }
+      default:
+        break;
+    }
+    Serial.print("Test num: ");
+    Serial.println(test_num);
+    
+    return inputObject;
+}
+*/
 
 void loop() {
     String closest_object_category;
@@ -219,13 +298,17 @@ void loop() {
     Detection_Sensor = digitalRead(IR_SENSOR_PIN_1);
     
     // Sensor was tripped and wasn't right before.
+    // FIXME: Change based on how object is detected
     if(Detection_Sensor == LOW && !wait) {
+        // FIXME: Change "Object" to what is being detected
         Serial.println("Object Detected");
         
         delay(2000);
         
+        // The built in LED is lit to show that the sensor was tripped.
         digitalWrite(LED_BUILTIN, HIGH);
         
+        //Feature Exteaction
         Object inputObject = FeatureExtraction();
     
         // Classification
@@ -247,5 +330,23 @@ void loop() {
         digitalWrite(LED_BUILTIN, LOW);
         wait = false;
     }
+    
+    // Test Code without sensors
+    // Comment out above code
+    /*
+    String closest_object_category;
+    
+    Serial.println("Object Detected");
+    
+    delay(2000);
+
+    Object inputObject = testCode(test_num);
+
+    closest_object_category = ClassifyKNN(inputObject, knownObjects);
+
+    Actuation(closest_object_category);
+
+    delay(1000);
+    */
 }
 

@@ -1,10 +1,20 @@
 #include <Arduino.h>
+#include <math.h>
+#include <LiquidCrystal.h>
+#include "Object.h"
+
 #include <HX711.h>
 #include <Wire.h>
 #include "Adafruit_TCS34725.h"
-#include "Object.h"
 
+// LCD Screen
+const int rs = 41, en = 39, d4 = 37, d5 = 35, d6 = 33, d7 = 31;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+String lcd_current = "";
+
+// IR Sensor
 #define IR_SENSOR_PIN_1 6
+
 // Weight Sensor
 #define DOUT 3
 #define CLK 2
@@ -14,27 +24,30 @@ const int NUM_OF_CATEGORIES = 4;
 String ObjectCategories[NUM_OF_CATEGORIES] = {"Apple", "Orange", "Pear", "Lemon"};
 
 bool wait = false;
+
+// Used for test code
 int test_num = 0;
 
+// Sensor MIN/MAX Values
 const float WEIGHT_MAX = 300.0;
 const float WEIGHT_MIN = 100.0;
+
 const int COLOR_MAX = 255;
 const int COLOR_MIN = 0;
 
-// HX711 Weight Sensor
+// Weight Sensor
 // Use HX711_Calibration sketch to define
 float calibration_factor = -204340.00;
-
-// K Nearest Neighbors
-const int K = 3;
+HX711 scale(DOUT, CLK);
 
 // Color Sensor
 byte gammatable[256];
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_60X);
 
-// Weight Sensor
-HX711 scale(DOUT, CLK);
+// K Nearest Neighbors
+const int K = 3;
 
+// Setup knownObjects
 const int NUM_OF_KNOWN_OBJECTS = 12;
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
 
@@ -47,7 +60,7 @@ float RescaleValue(float value, const float min, const float max) {
     return (value-min)/(max-min);
 }
 
-// Rescale object features to 1-0 range
+// Rescale object features
 Object RescaleObject(Object object) {
     Object rescaledObject;
     rescaledObject.category = object.category;
@@ -102,15 +115,14 @@ Object FeatureExtraction() {
     // Color sensor definitions
     uint16_t r, g, b, c, colorTemp, lux;
 
-    // Get weight feature (in lbs) to the nearest 100ths place
-    // Gets the average of 5 readings minus the tare weight
-    // Need to debug with fruits
-    inputObject.weight = (scale.get_units(5), 1)*1000.0;
+    // Get weight measurement (in lbs) to the nearest 100ths place
+    inputObject.weight = (scale.get_units())*1000.0;
 
-    // Get color feature
+    // Get color measurement
     tcs.getRawData(&r, &g, &b, &c);
     colorTemp = tcs.calculateColorTemperature(r, g, b);
     lux = tcs.calculateLux(r, g, b);
+    
     // c is clear and it is the sum of the red, green, and blue values.
     uint32_t sum = c;
     float red, green, blue;
@@ -132,6 +144,15 @@ Object FeatureExtraction() {
     inputObject.g = (int)green;
     inputObject.b = (int)blue;
     
+    Serial.print("r: ");
+    Serial.println(inputObject.r);
+    Serial.print("g: ");
+    Serial.println(inputObject.g);
+    Serial.print("b: ");
+    Serial.println(inputObject.b);
+    Serial.print("Weight: ");
+    Serial.println(inputObject.weight);
+    
     return RescaleObject(inputObject);
 }
 
@@ -150,7 +171,8 @@ float ComputeDistanceofColors(Object inputObject, Object knownObject) {
 float ComputeDistanceofObjects(Object inputObject, Object knownObject) {
     float weight = inputObject.weight - knownObject.weight;
     float color_dist = ComputeDistanceofColors(inputObject, knownObject);
-    float dist = sqrt(pow(weight, 2) + pow(color_dist, 2));
+    float dist = pow(weight, 2) + pow(color_dist, 2);
+    dist = sqrt(dist);
     return dist;
 }
 
@@ -175,6 +197,7 @@ void Sort(float* distances, String* categories) {
 /*
     K-Nearest Neighbors (KNN)
 */
+
 // Implementation of KNN algorithm
 // It takes an input object and a list of known objects and predicts the category of the input object.
 String ClassifyKNN(Object inputObject, Object knownObjects[]) {
@@ -185,15 +208,6 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     Object kNearestObjects[K];
     float distances[NUM_OF_KNOWN_OBJECTS];
     String categories[NUM_OF_KNOWN_OBJECTS];
-
-    Serial.print("Object weight: ");
-    Serial.println(inputObject.weight);
-    Serial.print("Object red: ");
-    Serial.println(inputObject.r);
-    Serial.print("Object green: ");
-    Serial.println(inputObject.g);
-    Serial.print("Object blue: ");
-    Serial.println(inputObject.b);
     
     // Compute the distance of each known object to the input object
     for(int i = 0; i < NUM_OF_KNOWN_OBJECTS; ++i) {
@@ -231,6 +245,16 @@ void Actuation(String category) {
         for(int i = 0; i < NUM_OF_CATEGORIES; ++i) {
             if(category == ObjectCategories[i]) {
                 Serial.println(category);
+                
+                // If the category has changed, print the new category to LCD
+                if(lcd_current != category) {
+                    lcd.setCursor(0,0);
+                    lcd.print("                ");
+                    lcd.setCursor(0,0);
+                    lcd.print(category);
+                    delay(500);
+                    lcd_current = category;
+                }
             }
         }
     }
@@ -239,9 +263,20 @@ void Actuation(String category) {
 void setup() {
     Serial.begin(9600);
 
+    PopulateKnownObjects();
+    
+    // LCD Screen
+    lcd.begin(16,2);
+
+    // IR Sensor
+    pinMode(IR_SENSOR_PIN_1, INPUT);
+    digitalWrite(IR_SENSOR_PIN_1, HIGH);
+
+    // Weight
     scale.set_scale(calibration_factor);
     scale.tare();
 
+    // Color
     if (tcs.begin()) {
         Serial.println("Found sensor");
     }
@@ -250,14 +285,13 @@ void setup() {
         while (1);
     }
 
-    pinMode(IR_SENSOR_PIN_1, INPUT);
-    digitalWrite(IR_SENSOR_PIN_1, HIGH);
-
+    // Arduino Built-in LED
     pinMode(LED_BUILTIN, OUTPUT);
-
-    PopulateKnownObjects();
 }
 
+// Can be used to test objects without sensors
+// Need to change loop() to use this.
+/*
 Object testCode(int& test_num) {
     Object inputObject;
 
@@ -306,33 +340,15 @@ Object testCode(int& test_num) {
     }
     Serial.print("Test num: ");
     Serial.println(test_num);
-
-    /*
-    AddToKnownObjects(0, "Apple", 228.0, 118, 76, 62);
-    AddToKnownObjects(1, "Apple", 216.0, 111, 80, 63);
-    AddToKnownObjects(2, "Apple", 224.0, 124, 80, 65);
-
-    AddToKnownObjects(3, "Orange", 270.0, 255, 139, 85);
-    AddToKnownObjects(4, "Orange", 257.0, 255, 140, 88);
-    AddToKnownObjects(5, "Orange", 250.0, 255, 128, 85);
-    
-    AddToKnownObjects(6, "Lemon", 154.0, 255, 229, 127);
-    AddToKnownObjects(7, "Lemon", 148.0, 255, 242, 139);
-    AddToKnownObjects(8, "Lemon", 141.0, 255, 255, 141);
-    
-    AddToKnownObjects(9, "Pear", 217.0, 198, 183, 110);
-    AddToKnownObjects(10, "Pear", 230.0, 172, 150, 90);
-    AddToKnownObjects(11, "Pear", 222.0, 207, 190, 109);
-    */
     
     return inputObject;
 }
-
+*/
 
 void loop() {
-    bool Detection_Sensor;
     String closest_object_category;
     
+    bool Detection_Sensor;
     Detection_Sensor = digitalRead(IR_SENSOR_PIN_1);
 
     // Sensor was tripped and wasn't right before.
@@ -366,5 +382,22 @@ void loop() {
         digitalWrite(LED_BUILTIN, LOW);
         wait = false;
     }
-  
+    
+    // Test Code without sensors
+    // Comment out above code
+    /*
+    String closest_object_category;
+    
+    Serial.println("Box Detected");
+    
+    delay(2000);
+
+    Object inputObject = testCode(test_num);
+
+    closest_object_category = ClassifyKNN(inputObject, knownObjects);
+
+    Actuation(closest_object_category);
+
+    delay(1000);
+    */
 }

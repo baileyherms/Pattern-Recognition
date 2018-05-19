@@ -8,12 +8,6 @@ typedef struct {
     float height;
     float width;
     float length;
-    //float weight;
-    //float red;
-    //float green;
-    //float blue;
 } Object;
 
-
 #endif
-

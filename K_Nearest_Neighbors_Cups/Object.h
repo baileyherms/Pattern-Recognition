@@ -10,5 +10,4 @@ typedef struct {
     float weight;
 } Object;
 
-
 #endif
