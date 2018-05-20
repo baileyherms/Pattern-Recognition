@@ -52,7 +52,7 @@ const int NUM_OF_KNOWN_OBJECTS = 12;
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
 
 /*
-    Known Objects Preperation
+    Known Objects Preparation
 */
 
 // Rescale a value to 0-1 range
