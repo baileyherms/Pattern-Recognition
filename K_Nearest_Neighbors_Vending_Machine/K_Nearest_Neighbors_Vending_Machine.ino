@@ -424,7 +424,7 @@ void loop() {
     /*
     String closest_object_category;
     
-    Object inputObject = FeatureExtraction();
+    Object inputObject = testCode(test_num);
 
     closest_object_category = ClassifyKNN(inputObject, knownObjects);
 
