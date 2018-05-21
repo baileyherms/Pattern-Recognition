@@ -79,7 +79,6 @@ Object RescaleObject(Object object) {
 */
 
 // Add an object to the known objects array
-// Change for each object (may need to add eight, colors, etc.)
 void AddToKnownObjects(int i, String category, float x_accel_diff, float y_accel_diff, float z_accel_diff) {
     knownObjects[i].category = category;
     knownObjects[i].x_accel_diff = x_accel_diff;
