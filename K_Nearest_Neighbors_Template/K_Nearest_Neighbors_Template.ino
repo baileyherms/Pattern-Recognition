@@ -39,8 +39,8 @@ int test_num = 0;
 const int DISTANCE_SENSOR_HEIGHT_MAX = 39;
 const int DISTANCE_SENSOR_HEIGHT_MIN = 2;
 
-// FIXME: Setup sensors if necessary
 // Distance Sensor
+// FIXME: Setup sensors if necessary
 NewPing sonar_height(TRIGGER_PIN_1, ECHO_PIN_1, DISTANCE_SENSOR_HEIGHT_MAX);
 
 // K Nearest Neighbors
@@ -49,7 +49,7 @@ const int K = 3;
 
 // Setup knownObjects
 // FIXME: Change when necessary
-const int NUM_OF_KNOWN_OBJECTS = 9;
+const int NUM_OF_KNOWN_OBJECTS = 1;
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
 
 /*
@@ -65,7 +65,7 @@ float RescaleValue(float value, const float min, const float max) {
 Object RescaleObject(Object object) {
     Object rescaledObject;
     rescaledObject.category = object.category;
-    // FIXME: Add for each object
+    // FIXME: Add for each feature
     rescaledObject.height = RescaleValue(object.height, DISTANCE_SENSOR_HEIGHT_MIN, DISTANCE_SENSOR_HEIGHT_MAX);
     return rescaledObject;
 }
@@ -75,14 +75,14 @@ Object RescaleObject(Object object) {
 */
 
 // Add an object to the known objects array
-// Change for each object (may need to add eight, colors, etc.)
+// Change for each object (may need to add weight, colors, etc.)
 void AddToKnownObjects(int i, String category, float height) {
     knownObjects[i].category = category;
     knownObjects[i].height = height;
     knownObjects[i] = RescaleObject(knownObjects[i]);
 }
 
-// Insert all Known objects into the array
+// Insert all known objects into the array
 void PopulateKnownObjects() {
     // FIXME: Add for every test object.
     /* 
