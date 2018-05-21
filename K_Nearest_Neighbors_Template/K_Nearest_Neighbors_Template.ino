@@ -132,7 +132,7 @@ float ComputeDistanceofColors(Object inputObject, Object knownObject) {
 // Can add or remove features
 float ComputeDistanceofObjects(Object inputObject, Object knownObject) {
     // FIXME: For non-color features
-    //float [feature] = ((inputObject.[feature] - knownObject.[feature]) - [feature]_MIN) / ([feature]_MAX - [feature]_MIN);
+    //float [feature] = (inputObject.[feature] - knownObject.[feature]);
     float height = (inputObject.height - knownObject.height);
     // FIXME (optional): For color feature
     //float colorDistance = ComputeDistanceofColors(inputObject, knownObject);
