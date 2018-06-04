@@ -49,15 +49,11 @@ const int length_detect_values = 100;
 const int time_between_values = 10;
 
 // K Nearest Neighbors
-const int K = 3;
+#define K_Parameter 3
 
 // Setup knownObjects
-const int NUM_OF_KNOWN_OBJECTS = 8;
+#define NUM_OF_KNOWN_OBJECTS 8
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
-
-/*
-    Known Objects Preperation
-*/
 
 // Rescale a value to 0-1 range
 float RescaleValue(float value, const float min, const float max) {
@@ -73,10 +69,6 @@ Object RescaleObject(Object object) {
     rescaledObject.z_accel_diff = RescaleValue(object.z_accel_diff, z_accel_diff_MIN, z_accel_diff_MAX);
     return rescaledObject;
 }
-
-/*
-    Populating known objects
-*/
 
 // Add an object to the known objects array
 void AddToKnownObjects(int i, String category, float x_accel_diff, float y_accel_diff, float z_accel_diff) {
@@ -102,9 +94,7 @@ void PopulateKnownObjects() {
     AddToKnownObjects(7, "Abnormal Shaking", 3.82, 4.42, 8.67);
 }
 
-/*
-    Feature Extraction
-*/
+/* PHASE 1: FEATURE EXTRACTION */
 
 // Takes the features from the current object and converts them to strings and integers
 Object FeatureExtraction() {
@@ -168,11 +158,13 @@ Object FeatureExtraction() {
     return RescaleObject(inputObject);
 }
 
+/* PHASE 2: CLASSIFICATION */
+
 // Computes the euclidean distance between the known and the current object's features
-float ComputeDistanceofObjects(Object inputObject, Object knownObject) {
-    float x_accel_diff_dist = (inputObject.x_accel_diff - knownObject.x_accel_diff);
-    float y_accel_diff_dist = (inputObject.y_accel_diff - knownObject.y_accel_diff);
-    float z_accel_diff_dist = (inputObject.z_accel_diff - knownObject.z_accel_diff);
+float ComputeDistanceofObjects(Object object1, Object object2) {
+    float x_accel_diff_dist = (object1.x_accel_diff - object2.x_accel_diff);
+    float y_accel_diff_dist = (object1.y_accel_diff - object2.y_accel_diff);
+    float z_accel_diff_dist = (object1.z_accel_diff - object2.z_accel_diff);
     float dist = pow(x_accel_diff_dist, 2) + pow(y_accel_diff_dist, 2) + pow(z_accel_diff_dist, 2);
     dist = sqrt(dist);
     return dist;
@@ -196,10 +188,6 @@ void Sort(float* distances, String* categories) {
     }
 }
 
-/*
-    K-Nearest Neighbors (KNN)
-*/
-
 // Implementation of KNN algorithm
 // It takes an input object and a list of known objects and predicts the category of the input object.
 String ClassifyKNN(Object inputObject, Object knownObjects[]) {
@@ -207,7 +195,7 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     int max_count = 0;
     String most_frequent_category;
 
-    Object kNearestObjects[K];
+    Object kNearestObjects[K_Parameter];
     float distances[NUM_OF_KNOWN_OBJECTS];
     String categories[NUM_OF_KNOWN_OBJECTS];
     
@@ -223,7 +211,7 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     // Find out which object type occurs most frequently
     for(int i = 0; i < NUM_OF_CATEGORIES; ++i) {
         count = 0;
-        for(int j = 0; j < K; ++j) {
+        for(int j = 0; j < K_Parameter; ++j) {
             if(categories[j] == ObjectCategories[i]) {
                 count++;
             }
@@ -237,9 +225,7 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     return most_frequent_category;
 }
 
-/* 
-    Object Actuation
-*/
+/* PHASE 3: ACTUATION */
 
 // Prints the type of object that is being passed through the project
 void Actuation(String category) {

@@ -45,15 +45,11 @@ byte gammatable[256];
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_60X);
 
 // K Nearest Neighbors
-const int K = 3;
+#define K_Parameter 3
 
 // Setup knownObjects
-const int NUM_OF_KNOWN_OBJECTS = 12;
+#define NUM_OF_KNOWN_OBJECTS 12
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
-
-/*
-    Known Objects Preparation
-*/
 
 // Rescale a value to 0-1 range
 float RescaleValue(float value, const float min, const float max) {
@@ -70,10 +66,6 @@ Object RescaleObject(Object object) {
     rescaledObject.b = RescaleValue(object.b, COLOR_MIN, COLOR_MAX);
     return rescaledObject;
 }
-
-/*
-    Populating known objects
-*/
 
 // Add an object to the known objects array
 void AddToKnownObjects(int i, String category, float weight, float r, float g, float b) {
@@ -104,9 +96,7 @@ void PopulateKnownObjects() {
     AddToKnownObjects(11, "Pear", 222.0, 207, 190, 109);
 }
 
-/*
-    Feature Extraction
-*/
+/* PHASE 1: FEATURE EXTRACTION */
 
 // Takes the features from the current object and converts them to strings and integers
 Object FeatureExtraction() {
@@ -156,12 +146,13 @@ Object FeatureExtraction() {
     return RescaleObject(inputObject);
 }
 
+/* PHASE 2: CLASSIFICATION */
 
 //  Computes the euclidean distance between the known and the current object's rgb values
-float ComputeDistanceofColors(Object inputObject, Object knownObject) {
-    float red = inputObject.r - knownObject.r;
-    float green = inputObject.g - knownObject.g;
-    float blue = inputObject.b - knownObject.b;
+float ComputeDistanceofColors(Object object1, Object object2) {
+    float red = object1.r - object2.r;
+    float green = object1.g - object2.g;
+    float blue = object1.b - object2.b;
     float dist = pow(red, 2) + pow(green, 2) + pow(blue, 2);
     dist = sqrt(dist);
     return dist;
@@ -194,10 +185,6 @@ void Sort(float* distances, String* categories) {
     }
 }
 
-/*
-    K-Nearest Neighbors (KNN)
-*/
-
 // Implementation of KNN algorithm
 // It takes an input object and a list of known objects and predicts the category of the input object.
 String ClassifyKNN(Object inputObject, Object knownObjects[]) {
@@ -205,7 +192,7 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     int max_count = 0;
     String most_frequent_category;
 
-    Object kNearestObjects[K];
+    Object kNearestObjects[K_Parameter];
     float distances[NUM_OF_KNOWN_OBJECTS];
     String categories[NUM_OF_KNOWN_OBJECTS];
     
@@ -221,7 +208,7 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     // Find out which object type occurs most frequently
     for(int i = 0; i < NUM_OF_CATEGORIES; ++i) {
         count = 0;
-        for(int j = 0; j < K; ++j) {
+        for(int j = 0; j < K_Parameter; ++j) {
             if(categories[j] == ObjectCategories[i]) {
                 count++;
             }
@@ -235,9 +222,7 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     return most_frequent_category;
 }
 
-/* 
-    Object Actuation
-*/
+/* PHASE 3: ACTUATION */
 
 // Prints the type of object that is being passed through the project
 void Actuation(String category) {

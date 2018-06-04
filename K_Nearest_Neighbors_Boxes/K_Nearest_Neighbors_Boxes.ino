@@ -41,31 +41,27 @@ bool wait = false;
 int test_num = 0;
 
 // Sensor MIN/MAX Values
-const int DISTANCE_SENSOR_HEIGHT_MAX = 39;
-const int DISTANCE_SENSOR_WIDTH_MAX = 45;
-const int DISTANCE_SENSOR_LENGTH_MAX = 82;
+const int HEIGHT_MAX = 39;
+const int WIDTH_MAX = 45;
+const int LENGTH_MAX = 82;
 
-const int DISTANCE_SENSOR_HEIGHT_MIN = 2;
-const int DISTANCE_SENSOR_WIDTH_MIN = 1;
-const int DISTANCE_SENSOR_LENGTH_MIN = 1;
+const int HEIGHT_MIN = 2;
+const int WIDTH_MIN = 1;
+const int LENGTH_MIN = 1;
 
 // Distance sensor
-NewPing sonar_height(TRIGGER_PIN_1, ECHO_PIN_1, DISTANCE_SENSOR_HEIGHT_MAX);
-NewPing sonar_width_1(TRIGGER_PIN_2, ECHO_PIN_2, DISTANCE_SENSOR_WIDTH_MAX);
-NewPing sonar_width_2(TRIGGER_PIN_3, ECHO_PIN_3, DISTANCE_SENSOR_WIDTH_MAX);
-NewPing sonar_length_1(TRIGGER_PIN_4, ECHO_PIN_4, DISTANCE_SENSOR_LENGTH_MAX);
-NewPing sonar_length_2(TRIGGER_PIN_5, ECHO_PIN_5, DISTANCE_SENSOR_LENGTH_MAX);
+NewPing sonar_height(TRIGGER_PIN_1, ECHO_PIN_1, HEIGHT_MAX);
+NewPing sonar_width_1(TRIGGER_PIN_2, ECHO_PIN_2, WIDTH_MAX);
+NewPing sonar_width_2(TRIGGER_PIN_3, ECHO_PIN_3, WIDTH_MAX);
+NewPing sonar_length_1(TRIGGER_PIN_4, ECHO_PIN_4, LENGTH_MAX);
+NewPing sonar_length_2(TRIGGER_PIN_5, ECHO_PIN_5, LENGTH_MAX);
 
 // K Nearest Neighbors
-const int K = 3;
+#define K_Parameter 3
 
 // Setup knownObjects
-const int NUM_OF_KNOWN_OBJECTS = 9;
+#define NUM_OF_KNOWN_OBJECTS 9
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
-
-/*
-    Known Objects Preparation
-*/
 
 // Rescale a value to 0-1 range
 float RescaleValue(float value, const float min, const float max) {
@@ -76,15 +72,11 @@ float RescaleValue(float value, const float min, const float max) {
 Object RescaleObject(Object object) {
     Object rescaledObject;
     rescaledObject.category = object.category;
-    rescaledObject.height = RescaleValue(object.height, DISTANCE_SENSOR_HEIGHT_MIN, DISTANCE_SENSOR_HEIGHT_MAX);
-    rescaledObject.width = RescaleValue(object.width, DISTANCE_SENSOR_WIDTH_MIN, DISTANCE_SENSOR_WIDTH_MAX);
-    rescaledObject.length = RescaleValue(object.length, DISTANCE_SENSOR_LENGTH_MIN, DISTANCE_SENSOR_LENGTH_MAX);
+    rescaledObject.height = RescaleValue(object.height, HEIGHT_MIN, HEIGHT_MAX);
+    rescaledObject.width = RescaleValue(object.width, WIDTH_MIN, WIDTH_MAX);
+    rescaledObject.length = RescaleValue(object.length, LENGTH_MIN, LENGTH_MAX);
     return rescaledObject;
 }
-
-/*
-    Populating known objects
-*/
 
 // Add an object to the known objects array
 // Change for each object (may need to add eight, colors, etc.)
@@ -95,6 +87,8 @@ void AddToKnownObjects(int i, String category, float height, float width, float 
     knownObjects[i].length = length;
     knownObjects[i] = RescaleObject(knownObjects[i]);
 }
+
+/* PHASE 1: FEATURE EXTRACTION */
 
 // Insert all Known objects into the array
 void PopulateKnownObjects() {
@@ -110,10 +104,6 @@ void PopulateKnownObjects() {
     AddToKnownObjects(7, "Large", 22.0, 22.0, 32.0);
     AddToKnownObjects(8, "Large", 24.0, 26.0, 36.0);
 }
-
-/*
-    Feature Extraction
-*/
 
 // Takes the features from the current object and converts them to strings and integers
 Object FeatureExtraction() {
@@ -146,9 +136,9 @@ Object FeatureExtraction() {
     currLength2 = sonar_length_2.convert_cm(temp) - 1;
     
     // Convert values to actual height/width/length
-    inputObject.height = DISTANCE_SENSOR_HEIGHT_MAX - currHeight;
-    inputObject.width = DISTANCE_SENSOR_WIDTH_MAX - currWidth1 - currWidth2;
-    inputObject.length = DISTANCE_SENSOR_LENGTH_MAX - currLength1 - currLength2;
+    inputObject.height = HEIGHT_MAX - currHeight;
+    inputObject.width = WIDTH_MAX - currWidth1 - currWidth2;
+    inputObject.length = LENGTH_MAX - currLength1 - currLength2;
     
     Serial.print("Height: ");
     Serial.println(inputObject.height);
@@ -160,11 +150,13 @@ Object FeatureExtraction() {
     return RescaleObject(inputObject);
 }
 
+/* PHASE 2: CLASSIFICATION */
+
 // Computes the euclidean distance between the known and the current object's features
-float ComputeDistanceofObjects(Object inputObject, Object knownObject) {
-    float height = (inputObject.height - knownObject.height);
-    float width = (inputObject.width - knownObject.width);
-    float length = (inputObject.length - knownObject.length);
+float ComputeDistanceofObjects(Object object1, Object object1) {
+    float height = (object1.height - object2.height);
+    float width = (object1.width - object2.width);
+    float length = (object1.length - object2.length);
     float dist = pow(height, 2) + pow(width, 2) + pow(length, 2);
     dist = sqrt(dist);
     return dist;
@@ -188,10 +180,6 @@ void Sort(float* distances, String* categories) {
     }
 }
 
-/*
-    K-Nearest Neighbors (KNN)
-*/
-
 // Implementation of KNN algorithm
 // It takes an input object and a list of known objects and predicts the category of the input object.
 String ClassifyKNN(Object inputObject, Object knownObjects[]) {
@@ -199,7 +187,7 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     int max_count = 0;
     String most_frequent_category;
   
-    Object kNearestObjects[K];
+    Object kNearestObjects[K_Parameter];
     float distances[NUM_OF_KNOWN_OBJECTS];
     String categories[NUM_OF_KNOWN_OBJECTS];
     
@@ -215,7 +203,7 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     // Find out which object type occurs most frequently
     for(int i = 0; i < NUM_OF_CATEGORIES; ++i) {
         count = 0;
-        for(int j = 0; j < K; ++j) {
+        for(int j = 0; j < K_Parameter; ++j) {
             if(categories[j] == ObjectCategories[i]) {
                 count++;
             }
@@ -229,9 +217,7 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     return most_frequent_category;
 }
 
-/* 
-    Object Actuation
-*/
+/* PHASE 3: ACTUATION */
 
 // Prints the type of object that is being passed through the project
 void Actuation(String category) {

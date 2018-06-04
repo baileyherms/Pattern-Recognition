@@ -32,49 +32,42 @@ bool wait = false;
 // Used for test code
 int test_num = 0;
 
-// Sensor MIN/MAX Values
+// Max and min feature values, needed for normalization
 // FIXME: For each feature
-// const int [sensor]_[feature]_MAX = [number];
-// const int [sensor]_[feature]_MIN = [number];
-const int DISTANCE_SENSOR_HEIGHT_MAX = 39;
-const int DISTANCE_SENSOR_HEIGHT_MIN = 2;
+// const int [feature]_MAX = [number];
+// const int [feature]_MIN = [number];
+const int HEIGHT_MAX = 39;
+const int HEIGHT_MIN = 2;
 
 // Distance Sensor
 // FIXME: Setup sensors if necessary
-NewPing sonar_height(TRIGGER_PIN_1, ECHO_PIN_1, DISTANCE_SENSOR_HEIGHT_MAX);
+NewPing sonar_height(TRIGGER_PIN_1, ECHO_PIN_1, HEIGHT_MAX);
+// Classification definitions
 
-// K Nearest Neighbors
+// Classification definitions
 // FIXME: Change when necessary
-const int K = 3;
+#define K_Parameter 3 // User in KNN
 
 // Setup knownObjects
 // FIXME: Change when necessary
-const int NUM_OF_KNOWN_OBJECTS = 1;
+#define NUM_OF_KNOWN_OBJECTS 1
 Object knownObjects[NUM_OF_KNOWN_OBJECTS];
-
-/*
-    Known Objects Preparation
-*/
 
 // Rescale a value to 0-1 range
 float RescaleValue(float value, const float min, const float max) {
     return (value-min)/(max-min);
 }
 
-// Rescale object features
+// Rescale object features to 0-1 range
 Object RescaleObject(Object object) {
     Object rescaledObject;
     rescaledObject.category = object.category;
     // FIXME: Add for each feature
-    rescaledObject.height = RescaleValue(object.height, DISTANCE_SENSOR_HEIGHT_MIN, DISTANCE_SENSOR_HEIGHT_MAX);
+    rescaledObject.height = RescaleValue(object.height, HEIGHT_MIN, HEIGHT_MAX);
     return rescaledObject;
 }
 
-/*
-    Populating known objects
-*/
-
-// Add an object to the known objects array
+// Add new object to the known objects array
 // Change for each object (may need to add weight, colors, etc.)
 void AddToKnownObjects(int i, String category, float height) {
     knownObjects[i].category = category;
@@ -82,7 +75,7 @@ void AddToKnownObjects(int i, String category, float height) {
     knownObjects[i] = RescaleObject(knownObjects[i]);
 }
 
-// Insert all known objects into the array
+// Insert all known objects into the known objects array ("training data")
 void PopulateKnownObjects() {
     // FIXME: Add for every test object.
     /* 
@@ -91,11 +84,11 @@ void PopulateKnownObjects() {
     AddToKnownObjects(0, "Small", 8.0);
 }
 
-/*
-    Feature Extraction
-*/
+/* PHASE 1: FEATURE EXTRACTION */
 
-// Takes the features from the current object and converts them to strings and integers
+// Extract features from sensors and create a new object with those features
+// Default example below just uses sensor values as features
+// For other applications, calculations may convert sensor values to features
 Object FeatureExtraction() {
     Object inputObject;
 
@@ -106,7 +99,7 @@ Object FeatureExtraction() {
     currHeight = sonar_height.ping_cm();
 
     // FIXME: Assign each of those features to inputObject
-    inputObject.height = DISTANCE_SENSOR_HEIGHT_MAX - currHeight;
+    inputObject.height = HEIGHT_MAX - currHeight;
     
     // FIXME: Print each feature measurement
     Serial.print("Height: ");
@@ -128,14 +121,15 @@ float ComputeDistanceofColors(Object inputObject, Object knownObject) {
 }
 */
 
-// Computes the euclidean distance between the known and the current object's features
-// Can add or remove features
-float ComputeDistanceofObjects(Object inputObject, Object knownObject) {
+/* PHASE 2: CLASSIFICATION */
+
+// Computes Euclidean distance between two objects for any # of dimensions.
+float ComputeDistanceofObjects(Object object1, Object object2) {
     // FIXME: For non-color features
-    //float [feature] = (inputObject.[feature] - knownObject.[feature]);
-    float height = (inputObject.height - knownObject.height);
+    //float [feature] = (object1.[feature] - object2.[feature]);
+    float height = (object1.height - object2.height);
     // FIXME (optional): For color feature
-    //float colorDistance = ComputeDistanceofColors(inputObject, knownObject);
+    //float colorDistance = ComputeDistanceofColors(object1, object2);
     // FIXME: For each feature
     //float dist = pow([feature 1], 2) + pow([feature 2], 2) + pow([feature 3], 2);
     float dist = pow(height, 2);
@@ -143,7 +137,7 @@ float ComputeDistanceofObjects(Object inputObject, Object knownObject) {
     return dist;
 }
 
-// Sorts all the provided distances from small to large
+// Sorts the provided distances from small to large
 void Sort(float* distances, String* categories) {
     float temp_dist;
     String temp_category;
@@ -161,18 +155,14 @@ void Sort(float* distances, String* categories) {
     }
 }
 
-/*
-    K-Nearest Neighbors (KNN)
-*/
-
-// Implementation of KNN algorithm
-// It takes an input object and a list of known objects and predicts the category of the input object.
+// KNN classification: Predicts the input object's category given known objects
 String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     int count = 0;
     int max_count = 0;
     String most_frequent_category;
     
-    Object kNearestObjects[K];
+    // Maintains K nearest knownObjects
+    Object kNearestObjects[K_Parameter];
     float distances[NUM_OF_KNOWN_OBJECTS];
     String categories[NUM_OF_KNOWN_OBJECTS];
     
@@ -185,15 +175,17 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     // Sort distances in ascending order
     Sort(distances, categories);
 
-    // Find out which object type occurs most frequently
+    // For each category, determine if it’s the most frequent 
+    // among the K closest known objects
     for(int i = 0; i < NUM_OF_CATEGORIES; ++i) {
         count = 0;
-        for(int j = 0; j < K; ++j) {
+        // Count frequency of this category in K closest objects
+        for(int j = 0; j < K_Parameter; ++j) {
             if(categories[j] == ObjectCategories[i]) {
                 count++;
             }
         }
-        if(count > max_count) {
+        if(count > max_count) { // Most frequent category so far
             max_count = count;
             most_frequent_category = ObjectCategories[i];
         }
@@ -202,11 +194,9 @@ String ClassifyKNN(Object inputObject, Object knownObjects[]) {
     return most_frequent_category;
 }
 
-/* 
-    Object Actuation
-*/
+/* PHASE 3: ACTUATION */
 
-// Prints the type of object that is being passed through the project
+// Turns on corresponding output bit to show category of the input object
 void Actuation(String category) {
     if(category != "") {
         for(int i = 0; i < NUM_OF_CATEGORIES; ++i) {
@@ -308,13 +298,13 @@ void loop() {
         // The built in LED is lit to show that the sensor was tripped.
         digitalWrite(LED_BUILTIN, HIGH);
         
-        //Feature Exteaction
+        // Phase 1
         Object inputObject = FeatureExtraction();
     
-        // Classification
+        // Phase 2
         closest_object_category = ClassifyKNN(inputObject, knownObjects);
     
-        // Actuation
+        // Phase 3
         Actuation(closest_object_category);
         
         wait = true;
