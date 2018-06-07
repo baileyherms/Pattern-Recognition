@@ -59,7 +59,7 @@ NewPing sonar_width_1(TRIGGER_PIN_2, ECHO_PIN_2, WIDTH_MAX);
 NewPing sonar_width_2(TRIGGER_PIN_3, ECHO_PIN_3, WIDTH_MAX);
 
 // K Nearest Neighbors
-#define K_Parameter 3;
+#define K_Parameter 3
 
 // Setup knownObjects
 #define NUM_OF_KNOWN_OBJECTS 9

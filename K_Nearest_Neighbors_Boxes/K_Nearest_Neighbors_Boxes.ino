@@ -153,7 +153,7 @@ Object FeatureExtraction() {
 /* PHASE 2: CLASSIFICATION */
 
 // Computes the euclidean distance between the known and the current object's features
-float ComputeDistanceofObjects(Object object1, Object object1) {
+float ComputeDistanceofObjects(Object object1, Object object2) {
     float height = (object1.height - object2.height);
     float width = (object1.width - object2.width);
     float length = (object1.length - object2.length);
